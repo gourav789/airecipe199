@@ -247,9 +247,47 @@
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }
     }
+
+    /* ---------- Access gate (shown when user hasn't paid) ---------- */
+    #accessGate {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--cream);
+      display: none; align-items: center; justify-content: center; padding: 24px;
+    }
+    #accessGate.show { display: flex; }
+    #accessGate .gate-card {
+      max-width: 420px; width: 100%; text-align: center;
+      background: #fff; border: 1px solid #f0e4d8; border-radius: 22px;
+      padding: 34px 26px; box-shadow: 0 12px 40px rgba(232,72,28,0.12);
+    }
+    #accessGate .lock { font-size: 46px; margin-bottom: 10px; }
+    #accessGate h2 { font-size: 22px; margin-bottom: 8px; }
+    #accessGate p { color: var(--muted); font-size: 15px; margin-bottom: 20px; }
+    #accessGate .price { font-size: 30px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+    #accessGate .price s { font-size: 18px; color: #b0a496; font-weight: 600; margin-right: 8px; }
+    #accessGate .gate-btn {
+      display: inline-block; background: var(--primary); color: #fff; text-decoration: none;
+      font-weight: 800; font-size: 17px; padding: 15px 30px; border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(232,72,28,0.35); margin-top: 8px;
+    }
+    #accessGate .gate-note { font-size: 12px; color: var(--muted); margin-top: 14px; }
   </style>
 </head>
 <body>
+
+  <!-- Access gate: shown to visitors who haven't paid -->
+  <div id="accessGate">
+    <div class="gate-card">
+      <div class="lock">🔒</div>
+      <h2>Premium Tool</h2>
+      <p>Ye AI recipe tool premium hai. Access paane ke liye one-time payment karo — phir lifetime use karo.</p>
+      <div class="price"><s>₹499</s>₹199</div>
+      <p style="margin-top:2px;">One-time payment · Lifetime access</p>
+      <!-- Razorpay Payment Link yahan lagega (homepage jaisa) -->
+      <a href="index.html#buy" class="gate-btn">Unlock for ₹199 →</a>
+      <p class="gate-note">Payment ke baad aap seedha yahan pahunch jaoge.</p>
+    </div>
+  </div>
 
   <div class="bg-blobs">
     <div class="blob b1"></div>
@@ -817,6 +855,9 @@
         count: 5
       };
 
+      // Add ?debug=1 to the tool URL to see the real error instead of the fallback.
+      const debugMode = new URLSearchParams(location.search).get("debug") === "1";
+
       let recipes;
       try {
         // ---- REAL AI CALL (works once /api/recipes is deployed on Vercel) ----
@@ -825,11 +866,21 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error("AI backend not available");
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(`API ${res.status}: ${data.error || "unknown error"}`);
+        }
         recipes = data.recipes;
-        if (!Array.isArray(recipes) || !recipes.length) throw new Error("empty");
+        if (!Array.isArray(recipes) || !recipes.length) throw new Error("AI returned no recipes");
       } catch (e) {
+        console.error("Recipe generation error:", e);
+        if (debugMode) {
+          document.getElementById("results").innerHTML =
+            `<div class="recipe"><h4>⚠️ Debug error</h4><p style="color:#c0392b;">${e.message}</p>
+             <p style="font-size:13px;color:#6b5d4f;">Yeh sirf debug mode mein dikh raha hai. Vercel Logs bhi check karo.</p></div>`;
+          btn.disabled = false;
+          return;
+        }
         // ---- FALLBACK: local generator using the user's real ingredients ----
         recipes = buildLocalRecipes(chosen, diet, [...equipment]);
       }
@@ -1218,6 +1269,35 @@
           <script>setTimeout(function(){window.print();},600);<\/script>
         </body></html>`);
       win.document.close();
+    }
+
+    // =====================================================
+    // ACCESS CONTROL
+    // Payment ke baad Razorpay user ko is page par ?key=<SECRET> ke saath bhejta hai.
+    // Sahi key mile to access mil jaata hai aur localStorage me yaad rakh liya jaata hai,
+    // taaki user ko dobara payment na karna pade.
+    // =====================================================
+    const ACCESS_TOKEN = "arecipe_ok_7h2k9";   // <-- yahi token Razorpay redirect URL me daalna hai
+    const STORAGE_KEY = "airecipe_access";
+
+    function checkAccess() {
+      const urlKey = new URLSearchParams(location.search).get("key");
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (urlKey === ACCESS_TOKEN) {
+        // Aaya payment ke baad — access grant karo aur yaad rakho
+        localStorage.setItem(STORAGE_KEY, ACCESS_TOKEN);
+        return true;
+      }
+      if (saved === ACCESS_TOKEN) {
+        // Pehle se paid user (is device par)
+        return true;
+      }
+      return false;
+    }
+
+    if (!checkAccess()) {
+      document.getElementById("accessGate").classList.add("show");
     }
 
     // =====================================================
