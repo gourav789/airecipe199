@@ -393,14 +393,10 @@
       <div class="price-box fade-up">
         <div class="big"><s>₹499</s>₹199</div>
         <div class="once">One-time payment · Lifetime access · No monthly fees</div>
-        <!-- 
-          NOTE: Neeche href="#" ki jagah aap apna Razorpay Payment Link daaloge.
-          Jaise: href="https://rzp.io/l/airecipe199"
-        -->
-        <a href="#" class="cta" id="buyBtn">
+        <button class="cta" id="buyBtn" onclick="startPayment()" style="border:none;cursor:pointer;font-family:inherit;">
           Buy Now — ₹199
           <small>Secure payment via Razorpay</small>
-        </a>
+        </button>
         <p class="price-note" style="margin-top:16px;">🔒 100% secure payment · Instant access</p>
       </div>
     </section>
@@ -489,6 +485,82 @@
       }, { threshold: 0.15 });
       items.forEach(el => obs.observe(el));
     })();
+  </script>
+
+  <!-- Razorpay Checkout library -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    // Where the user lands after a verified payment (tool unlocked)
+    const TOOL_URL = "tool.html";
+
+    async function startPayment() {
+      const btn = document.getElementById("buyBtn");
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = "Please wait...";
+
+      try {
+        // 1) Create an order on our server (keeps the secret hidden)
+        const orderRes = await fetch("/api/create-order", { method: "POST" });
+        const order = await orderRes.json();
+        if (!orderRes.ok) throw new Error(order.error || "Order failed");
+
+        // 2) Open Razorpay Checkout
+        const options = {
+          key: order.keyId,
+          amount: order.amount,
+          currency: order.currency,
+          order_id: order.orderId,
+          name: "airecipe.onl",
+          description: "Lifetime Access — AI Recipe Tool",
+          theme: { color: "#e8481c" },
+          handler: async function (response) {
+            // 3) Verify the payment on our server
+            try {
+              const verifyRes = await fetch("/api/verify-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(response)
+              });
+              const data = await verifyRes.json();
+              if (verifyRes.ok && data.verified && data.token) {
+                // Save access + go to the tool
+                localStorage.setItem("airecipe_access", data.token);
+                window.location.href = TOOL_URL + "?key=" + encodeURIComponent(data.token);
+              } else {
+                alert("Payment verification failed. Agar paise kat gaye hain to hume contact karein.");
+                btn.disabled = false;
+                btn.innerHTML = original;
+              }
+            } catch (e) {
+              alert("Verification error. Support se contact karein.");
+              btn.disabled = false;
+              btn.innerHTML = original;
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              btn.disabled = false;
+              btn.innerHTML = original;
+            }
+          }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.on("payment.failed", function () {
+          alert("Payment fail ho gaya. Dobara try karein.");
+          btn.disabled = false;
+          btn.innerHTML = original;
+        });
+        rzp.open();
+
+      } catch (err) {
+        console.error(err);
+        alert("Payment shuru nahi ho paya. Thodi der baad try karein.");
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
+    }
   </script>
 
 </body>

@@ -32,11 +32,31 @@ Push all these files to your GitHub repo (airecipe199 / or any repo).
 - Select ingredients → "Generate 5 Recipes"
 - Real AI recipes (Hinglish) should appear.
 
-## STEP 5 — Razorpay (later)
-- In `index.html`, find the Buy Now button (`href="#"`) and replace `#`
-  with your Razorpay Payment Link.
-- In the Razorpay Payment Link settings, set the "redirect after payment"
-  URL to your tool page (secret URL).
+## STEP 5 — Razorpay API keys (for payments)
+The Buy Now button uses Razorpay Checkout. Add these in Vercel → Settings →
+Environment Variables (same place as the DeepSeek key):
+
+1. **RAZORPAY_KEY_ID**  = your Razorpay Key Id (starts with `rzp_live_...` or `rzp_test_...`)
+2. **RAZORPAY_KEY_SECRET** = your Razorpay Key Secret
+
+Get these from: Razorpay Dashboard → Account & Settings → API Keys → Generate Key.
+
+- Use **Test keys** (`rzp_test_...`) first to test without real money.
+- Switch to **Live keys** (`rzp_live_...`) when ready to accept real payments.
+
+After adding, **Redeploy** the project.
+
+### Payment flow
+1. User clicks "Buy Now ₹199" on the homepage.
+2. `/api/create-order` creates a Razorpay order (secret stays hidden).
+3. Razorpay Checkout popup opens; user pays.
+4. `/api/verify-payment` verifies the signature on the server.
+5. If genuine, the user is redirected to `tool.html?key=arecipe_ok_7h2k9` and
+   access is saved in the browser (localStorage).
+
+### Access token
+- Tool unlock token is `arecipe_ok_7h2k9` (in tool.html and verify-payment.js).
+- To change it, update BOTH files to the same value.
 
 ---
 
