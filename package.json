@@ -1,0 +1,10 @@
+{
+  "name": "airecipe-onl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "airecipe.onl — AI recipe generator from your kitchen ingredients",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  }
+}

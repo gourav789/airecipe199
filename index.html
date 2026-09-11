@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>airecipe.onl — Ghar ke saamaan se AI banaye 5 Recipes | Sirf ₹199</title>
+  <meta name="description" content="Ghar mein jo bhi sabzi, masale aur saamaan hai woh select karo, aur AI turant banayega 5 swadisht recipes. One-time ₹199, lifetime access." />
+
+  <!-- Open Graph (Facebook ads / sharing ke liye) -->
+  <meta property="og:title" content="Ghar ke saamaan se AI banaye 5 Recipes — Sirf ₹199" />
+  <meta property="og:description" content="Roz sochte ho aaj kya banau? Ab AI batayega. Ingredients select karo, 5 jhatpat recipes paao." />
+  <meta property="og:type" content="website" />
+
+  <style>
+    :root {
+      --primary: #e8481c;
+      --primary-dark: #c73a12;
+      --dark: #1f1300;
+      --cream: #fff7ef;
+      --green: #1a8f4c;
+      --muted: #6b5d4f;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--dark);
+      background: var(--cream);
+      line-height: 1.6;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 2; }
+
+    /* ==================================================
+       ANIMATED BACKGROUND
+       ================================================== */
+
+    /* Soft moving color blobs */
+    .bg-blobs {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.45;
+      animation: drift 18s ease-in-out infinite;
+    }
+    .blob.b1 { width: 320px; height: 320px; background: #ffd0b8; top: -80px; left: -60px; animation-delay: 0s; }
+    .blob.b2 { width: 260px; height: 260px; background: #ffe3a3; top: 40%; right: -80px; animation-delay: 4s; }
+    .blob.b3 { width: 300px; height: 300px; background: #ffc2ad; bottom: -100px; left: 20%; animation-delay: 8s; }
+
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%      { transform: translate(30px, -40px) scale(1.1); }
+      66%      { transform: translate(-25px, 25px) scale(0.95); }
+    }
+
+    /* Floating food emojis */
+    .bg-food {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .food {
+      position: absolute;
+      bottom: -60px;
+      font-size: 30px;
+      opacity: 0;
+      animation: floatUp linear infinite;
+      will-change: transform, opacity;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(0) rotate(0deg);   opacity: 0; }
+      10%  { opacity: 0.5; }
+      90%  { opacity: 0.5; }
+      100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+    }
+
+    /* ==================================================
+       ENTRANCE + SCROLL ANIMATIONS
+       ================================================== */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-up.show { opacity: 1; transform: translateY(0); }
+
+    /* Stagger delays */
+    .d1 { transition-delay: 0.05s; }
+    .d2 { transition-delay: 0.15s; }
+    .d3 { transition-delay: 0.25s; }
+
+    /* ---------- Header ---------- */
+    header { padding: 18px 0; text-align: center; }
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--dark); }
+
+    /* ---------- Hero ---------- */
+    .hero { text-align: center; padding: 24px 0 40px; }
+    .badge {
+      display: inline-block;
+      background: #ffe6d9;
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+      animation: pulseBadge 2.4s ease-in-out infinite;
+    }
+    @keyframes pulseBadge {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,72,28,0.25); }
+      50%      { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(232,72,28,0); }
+    }
+    .hero h1 { font-size: 30px; line-height: 1.25; font-weight: 800; margin-bottom: 14px; }
+    .hero h1 .hl {
+      color: var(--primary);
+      background: linear-gradient(120deg, var(--primary), #ff8a3d, var(--primary));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 3s linear infinite;
+    }
+    @keyframes shine {
+      to { background-position: 200% center; }
+    }
+    .hero p.sub { font-size: 17px; color: var(--muted); margin-bottom: 26px; }
+
+    /* Animated cooking pot emoji */
+    .hero-emoji {
+      font-size: 54px;
+      display: inline-block;
+      margin-bottom: 10px;
+      animation: bob 2.2s ease-in-out infinite;
+    }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0) rotate(-3deg); }
+      50%      { transform: translateY(-10px) rotate(3deg); }
+    }
+
+    /* ---------- CTA button ---------- */
+    .cta {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      font-size: 19px;
+      font-weight: 800;
+      text-decoration: none;
+      padding: 16px 34px;
+      border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(232, 72, 28, 0.35);
+      transition: transform 0.15s ease, background 0.15s ease;
+      animation: ctaPulse 2.8s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta:hover { background: var(--primary-dark); transform: translateY(-2px) scale(1.02); }
+    .cta small { display: block; font-size: 12px; font-weight: 600; opacity: 0.9; margin-top: 2px; }
+    @keyframes ctaPulse {
+      0%, 100% { box-shadow: 0 8px 20px rgba(232,72,28,0.35); }
+      50%      { box-shadow: 0 8px 30px rgba(232,72,28,0.6); }
+    }
+    /* Shimmer sweep on button */
+    .cta::after {
+      content: "";
+      position: absolute;
+      top: 0; left: -120%;
+      width: 60%; height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
+      transform: skewX(-20deg);
+      animation: sweep 3.5s ease-in-out infinite;
+    }
+    @keyframes sweep {
+      0%   { left: -120%; }
+      60%  { left: 140%; }
+      100% { left: 140%; }
+    }
+
+    .price-note { margin-top: 12px; font-size: 14px; color: var(--muted); }
+    .price-note s { color: #b0a496; }
+
+    /* ---------- Sections ---------- */
+    section { padding: 34px 0; }
+    .section-title { text-align: center; font-size: 23px; font-weight: 800; margin-bottom: 26px; }
+
+    .steps { display: grid; gap: 16px; }
+    .step {
+      background: #fff;
+      border: 1px solid #f0e4d8;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .step:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(232,72,28,0.12); }
+    .step .num {
+      flex: 0 0 auto;
+      width: 38px; height: 38px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-weight: 800;
+      font-size: 17px;
+    }
+    .step h3 { font-size: 17px; margin-bottom: 2px; }
+    .step p { font-size: 15px; color: var(--muted); }
+
+    /* ---------- Benefits ---------- */
+    .benefits {
+      background: #fff;
+      border-radius: 20px;
+      padding: 26px 22px;
+      border: 1px solid #f0e4d8;
+    }
+    .benefit { display: flex; gap: 12px; padding: 10px 0; font-size: 16px; }
+    .benefit .tick { color: var(--green); font-weight: 800; flex: 0 0 auto; }
+
+    /* ---------- Price box ---------- */
+    .price-box {
+      background: linear-gradient(160deg, #fff 0%, #fff3ea 100%);
+      border: 2px solid var(--primary);
+      border-radius: 22px;
+      padding: 30px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .price-box .big { font-size: 44px; font-weight: 800; color: var(--primary); line-height: 1; }
+    .price-box .big s { font-size: 22px; color: #b0a496; font-weight: 600; margin-right: 8px; }
+    .price-box .once { font-size: 15px; color: var(--muted); margin: 8px 0 22px; }
+
+    /* ---------- FAQ ---------- */
+    .faq-item {
+      background: #fff;
+      border: 1px solid #f0e4d8;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      transition: transform 0.2s ease;
+    }
+    .faq-item:hover { transform: translateX(4px); }
+    .faq-item h4 { font-size: 16px; margin-bottom: 4px; }
+    .faq-item p { font-size: 14px; color: var(--muted); }
+
+    /* ---------- Footer ---------- */
+    footer { text-align: center; padding: 30px 0 40px; font-size: 13px; color: var(--muted); }
+    footer a { color: var(--muted); }
+
+    /* ---------- Sticky mobile CTA ---------- */
+    .sticky-cta {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      background: #fff;
+      border-top: 1px solid #f0e4d8;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+      z-index: 50;
+    }
+    .sticky-cta .p { font-weight: 800; font-size: 18px; color: var(--primary); }
+    .sticky-cta .p s { font-size: 13px; color: #b0a496; font-weight: 600; }
+    .sticky-cta a {
+      background: var(--primary);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 800;
+      padding: 12px 22px;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: transform 0.15s ease;
+    }
+    .sticky-cta a:active { transform: scale(0.96); }
+    body { padding-bottom: 78px; }
+
+    @media (min-width: 600px) {
+      .hero h1 { font-size: 38px; }
+    }
+
+    /* Respect users who prefer less motion */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+      .fade-up { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ANIMATED BACKGROUND LAYERS -->
+  <div class="bg-blobs">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+  </div>
+  <div class="bg-food" id="bgFood"></div>
+
+  <header>
+    <div class="wrap">
+      <div class="logo">ai<span>recipe</span>.onl</div>
+    </div>
+  </header>
+
+  <!-- ---------- HERO ---------- -->
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-emoji">🍳</div>
+      <span class="badge fade-up">🤖 AI Recipe Generator</span>
+      <h1 class="fade-up d1">Roz sochte ho <span class="hl">"aaj kya banau?"</span><br />Ab AI batayega!</h1>
+      <p class="sub fade-up d2">Ghar mein jo bhi sabzi, masale aur saamaan hai — bas select karo. AI turant banayega <b>5 swadisht recipes</b> jo aap abhi bana sakte ho.</p>
+
+      <div class="fade-up d3">
+        <a href="#buy" class="cta">
+          Abhi Try Karo — ₹199
+          <small>One-time payment · Lifetime access</small>
+        </a>
+        <p class="price-note"><s>₹499</s> &nbsp; Sirf ₹199 · Koi monthly fees nahi</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------- HOW IT WORKS ---------- -->
+  <div class="wrap">
+    <section>
+      <h2 class="section-title fade-up">Kaise kaam karta hai?</h2>
+      <div class="steps">
+        <div class="step fade-up d1">
+          <div class="num">1</div>
+          <div>
+            <h3>Saamaan select karo</h3>
+            <p>Sabzi, fruits, masale, oil, packet items (oats, Maggi), non-veg — jo bhi ghar mein hai woh tick karo. Oven hai ya nahi, woh bhi batao.</p>
+          </div>
+        </div>
+        <div class="step fade-up d2">
+          <div class="num">2</div>
+          <div>
+            <h3>AI recipes banata hai</h3>
+            <p>Aapke selected ingredients ke hisaab se AI turant 5 recipes tayaar karta hai — step-by-step, cooking time ke saath.</p>
+          </div>
+        </div>
+        <div class="step fade-up d3">
+          <div class="num">3</div>
+          <div>
+            <h3>Banao aur khao 😋</h3>
+            <p>Pasand ki recipe choose karo aur jhatpat swadisht khana tayaar. Bina market bhaage, ghar ke saamaan se hi.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------- BENEFITS ---------- -->
+  <div class="wrap">
+    <section>
+      <h2 class="section-title fade-up">Kya milega?</h2>
+      <div class="benefits fade-up d1">
+        <div class="benefit"><span class="tick">✓</span> Ghar ke available saamaan se hi recipes — kuch extra kharidna nahi</div>
+        <div class="benefit"><span class="tick">✓</span> Har baar 5 alag-alag recipe options</div>
+        <div class="benefit"><span class="tick">✓</span> Veg aur Non-veg dono ke liye</div>
+        <div class="benefit"><span class="tick">✓</span> Oven hai ya nahi — us hisaab se recipes</div>
+        <div class="benefit"><span class="tick">✓</span> Step-by-step aasaan instructions</div>
+        <div class="benefit"><span class="tick">✓</span> Unlimited use — jitni baar chaho</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------- PRICE / BUY ---------- -->
+  <div class="wrap">
+    <section id="buy">
+      <div class="price-box fade-up">
+        <div class="big"><s>₹499</s>₹199</div>
+        <div class="once">One-time payment · Lifetime access · No monthly fees</div>
+        <!-- 
+          NOTE: Neeche href="#" ki jagah aap apna Razorpay Payment Link daaloge.
+          Jaise: href="https://rzp.io/l/airecipe199"
+        -->
+        <a href="#" class="cta" id="buyBtn">
+          Buy Now — ₹199
+          <small>Secure payment via Razorpay</small>
+        </a>
+        <p class="price-note" style="margin-top:16px;">🔒 100% secure payment · Instant access</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------- FAQ ---------- -->
+  <div class="wrap">
+    <section>
+      <h2 class="section-title fade-up">Aksar puche jaane wale sawaal</h2>
+
+      <div class="faq-item fade-up d1">
+        <h4>Kya ye monthly charge karega?</h4>
+        <p>Nahi. Sirf ₹199 ek baar. Uske baad lifetime use kar sakte ho, koi extra charge nahi.</p>
+      </div>
+      <div class="faq-item fade-up d1">
+        <h4>Payment ke baad tool kaise milega?</h4>
+        <p>Payment complete hote hi aap seedha tool page pe pahunch jaoge, jahan ingredients select karke recipes bana sakte ho.</p>
+      </div>
+      <div class="faq-item fade-up d2">
+        <h4>Kya ye non-veg recipes bhi deta hai?</h4>
+        <p>Haan. Aap chicken, egg, fish jaise non-veg items select kar sakte ho aur AI us hisaab se recipes dega.</p>
+      </div>
+      <div class="faq-item fade-up d2">
+        <h4>Kya mujhe cooking aani chahiye?</h4>
+        <p>Nahi. Har recipe step-by-step aasaan bhaasha mein aati hai, taaki naya banda bhi bana sake.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------- FOOTER ---------- -->
+  <footer>
+    <div class="wrap">
+      <p>© 2026 airecipe.onl · Ghar ke saamaan se AI recipes</p>
+      <p style="margin-top:6px;">
+        <a href="about-us.html">About</a> ·
+        <a href="contact-us.html">Contact</a> ·
+        <a href="privacy-policy.html">Privacy</a> ·
+        <a href="terms-and-conditions.html">Terms</a> ·
+        <a href="refund-policy.html">Refund</a> ·
+        <a href="disclaimer.html">Disclaimer</a>
+      </p>
+    </div>
+  </footer>
+
+  <!-- ---------- STICKY MOBILE CTA ---------- -->
+  <div class="sticky-cta">
+    <div class="p"><s>₹499</s> ₹199</div>
+    <a href="#buy">Buy Now</a>
+  </div>
+
+  <script>
+    // ---------- Floating food emojis in background ----------
+    (function () {
+      const emojis = ["🍅", "🥔", "🧅", "🥕", "🌶️", "🥬", "🍆", "🧄", "🥚", "🍋", "🫑", "🍚", "🥘", "🍲"];
+      const container = document.getElementById("bgFood");
+      if (!container) return;
+
+      const count = window.innerWidth < 600 ? 10 : 16;
+      for (let i = 0; i < count; i++) {
+        const span = document.createElement("span");
+        span.className = "food";
+        span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        span.style.left = Math.random() * 100 + "vw";
+        span.style.fontSize = (22 + Math.random() * 22) + "px";
+        const dur = 14 + Math.random() * 16;      // 14s - 30s
+        span.style.animationDuration = dur + "s";
+        span.style.animationDelay = (-Math.random() * dur) + "s";
+        container.appendChild(span);
+      }
+    })();
+
+    // ---------- Scroll reveal (fade-up) ----------
+    (function () {
+      const items = document.querySelectorAll(".fade-up");
+      if (!("IntersectionObserver" in window)) {
+        items.forEach(el => el.classList.add("show"));
+        return;
+      }
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      items.forEach(el => obs.observe(el));
+    })();
+  </script>
+
+</body>
+</html>

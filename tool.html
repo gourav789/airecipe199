@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Recipe Tool — airecipe.onl</title>
+  <meta name="description" content="Select the ingredients you have at home and let AI create 5 quick recipes for you." />
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    :root {
+      --primary: #e8481c;
+      --primary-dark: #c73a12;
+      --dark: #1f1300;
+      --cream: #fff7ef;
+      --green: #1a8f4c;
+      --muted: #6b5d4f;
+      --chip-bg: #fff;
+      --chip-border: #ecdccd;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--dark);
+      background: var(--cream);
+      line-height: 1.6;
+      position: relative;
+      overflow-x: hidden;
+      padding-bottom: 96px;
+    }
+
+    .wrap { max-width: 820px; margin: 0 auto; padding: 0 18px; position: relative; z-index: 2; }
+
+    /* Animated background blobs */
+    .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.35; animation: drift 22s ease-in-out infinite; }
+    .blob.b1 { width: 300px; height: 300px; background: #ffd0b8; top: -90px; left: -70px; }
+    .blob.b2 { width: 260px; height: 260px; background: #ffe3a3; top: 45%; right: -90px; animation-delay: 6s; }
+    .blob.b3 { width: 280px; height: 280px; background: #ffc2ad; bottom: -110px; left: 25%; animation-delay: 11s; }
+    @keyframes drift {
+      0%, 100% { transform: translate(0,0) scale(1); }
+      33% { transform: translate(26px,-34px) scale(1.08); }
+      66% { transform: translate(-20px,20px) scale(0.96); }
+    }
+
+    /* Header */
+    .site-header {
+      padding: 14px 0;
+      border-bottom: 1px solid #f0e4d8;
+      background: rgba(255,247,239,0.9);
+      backdrop-filter: blur(6px);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .site-header .wrap { display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 20px; font-weight: 800; color: var(--primary); text-decoration: none; letter-spacing: -0.5px; }
+    .logo span { color: var(--dark); }
+    .lang-toggle {
+      display: flex; gap: 4px; background: #f3e7db; border-radius: 999px; padding: 3px;
+    }
+    .lang-toggle button {
+      border: none; background: transparent; cursor: pointer;
+      font-size: 13px; font-weight: 700; color: var(--muted);
+      padding: 6px 12px; border-radius: 999px; transition: all 0.15s;
+    }
+    .lang-toggle button.active { background: var(--primary); color: #fff; }
+
+    /* Intro */
+    .intro { text-align: center; padding: 26px 0 10px; }
+    .intro h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+    .intro p { font-size: 15px; color: var(--muted); }
+
+    /* Category sections */
+    .category { margin-top: 26px; }
+    .category h2 {
+      font-size: 18px; font-weight: 800; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .category .cat-sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--chip-bg); border: 1.5px solid var(--chip-border);
+      border-radius: 999px; padding: 9px 15px; cursor: pointer;
+      font-size: 14px; font-weight: 600; color: var(--dark);
+      transition: all 0.15s ease; user-select: none;
+    }
+    .chip .emoji { font-size: 16px; }
+    .chip .hindi { color: var(--muted); font-weight: 500; font-size: 13px; }
+    .chip:hover { border-color: var(--primary); transform: translateY(-1px); }
+    .chip.selected {
+      background: var(--primary); border-color: var(--primary); color: #fff;
+    }
+    .chip.selected .hindi { color: rgba(255,255,255,0.85); }
+
+    /* Equipment + diet toggles */
+    .options-grid { display: grid; gap: 12px; margin-top: 8px; }
+    .option-row {
+      background: #fff; border: 1px solid #f0e4d8; border-radius: 14px;
+      padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .option-row .label { font-weight: 700; font-size: 15px; }
+    .option-row .label small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
+
+    /* Toggle switch */
+    .switch { position: relative; width: 50px; height: 28px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: #d9cabb; border-radius: 999px;
+      transition: 0.2s; cursor: pointer;
+    }
+    .slider:before {
+      content: ""; position: absolute; height: 22px; width: 22px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: 0.2s;
+    }
+    .switch input:checked + .slider { background: var(--green); }
+    .switch input:checked + .slider:before { transform: translateX(22px); }
+
+    /* Diet pills */
+    .diet-pills { display: flex; gap: 10px; margin-top: 8px; }
+    .diet-pill {
+      flex: 1; text-align: center; padding: 12px; border-radius: 14px;
+      border: 1.5px solid var(--chip-border); background: #fff; cursor: pointer;
+      font-weight: 700; font-size: 15px; transition: all 0.15s;
+    }
+    .diet-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* Custom add */
+    .custom-add { display: flex; gap: 8px; margin-top: 12px; }
+    .custom-add input {
+      flex: 1; padding: 11px 14px; border: 1.5px solid var(--chip-border);
+      border-radius: 12px; font-size: 14px; outline: none;
+    }
+    .custom-add input:focus { border-color: var(--primary); }
+    .custom-add button {
+      background: var(--dark); color: #fff; border: none; border-radius: 12px;
+      padding: 0 18px; font-weight: 700; cursor: pointer; font-size: 14px;
+    }
+
+    /* Selected summary */
+    .summary {
+      margin-top: 26px; background: #fff; border: 1px solid #f0e4d8;
+      border-radius: 16px; padding: 16px 18px;
+    }
+    .summary h3 { font-size: 15px; margin-bottom: 8px; }
+    .summary .count { color: var(--primary); }
+    .summary .empty { color: var(--muted); font-size: 14px; }
+
+    /* Generate button (sticky) */
+    .generate-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      background: #fff; border-top: 1px solid #f0e4d8;
+      padding: 12px 16px; box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+    }
+    .generate-bar .wrap { display: flex; align-items: center; gap: 12px; }
+    .generate-btn {
+      flex: 1; background: var(--primary); color: #fff; border: none;
+      border-radius: 14px; padding: 15px; font-size: 17px; font-weight: 800;
+      cursor: pointer; transition: all 0.15s; box-shadow: 0 6px 16px rgba(232,72,28,0.3);
+    }
+    .generate-btn:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+    .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+    .sel-badge { font-weight: 800; font-size: 14px; color: var(--muted); white-space: nowrap; }
+
+    /* Results modal */
+    .results {
+      display: none; margin-top: 26px; background: #fff;
+      border: 1px solid #f0e4d8; border-radius: 16px; padding: 20px;
+    }
+    .results.show { display: block; animation: fadeUp 0.4s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px);} to {opacity:1; transform:none;} }
+    .recipe {
+      padding: 20px; margin-bottom: 18px;
+      border: 1px solid #f0e4d8; border-radius: 16px;
+      background: linear-gradient(160deg,#fff 0%, #fffaf5 100%);
+    }
+    .recipe:last-child { margin-bottom: 0; }
+    .recipe h4 { font-size: 19px; color: var(--primary-dark); margin-bottom: 6px; }
+    .recipe .meta {
+      font-size: 13px; color: var(--muted); margin-bottom: 14px;
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+    .recipe .meta span {
+      background: #fff3ea; border: 1px solid #ffe0cf;
+      padding: 4px 10px; border-radius: 999px; font-weight: 600;
+    }
+    .recipe .block-title {
+      font-size: 15px; font-weight: 800; margin: 16px 0 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* Ingredients table (with quantity / matra) */
+    .ing-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .ing-table th, .ing-table td {
+      text-align: left; padding: 8px 10px; border-bottom: 1px solid #f1e7dc;
+    }
+    .ing-table th { background: #faf1e8; font-weight: 700; color: var(--dark); }
+    .ing-table td:last-child, .ing-table th:last-child { text-align: right; white-space: nowrap; }
+
+    /* Steps */
+    .steps-list { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+    .steps-list li {
+      position: relative; padding: 8px 0 8px 38px; font-size: 15px;
+      border-bottom: 1px dashed #f1e7dc;
+    }
+    .steps-list li:last-child { border-bottom: none; }
+    .steps-list li::before {
+      counter-increment: step; content: counter(step);
+      position: absolute; left: 0; top: 8px;
+      width: 26px; height: 26px; background: var(--primary); color: #fff;
+      border-radius: 50%; display: grid; place-items: center;
+      font-size: 13px; font-weight: 700;
+    }
+
+    .tip-box {
+      background: #eefaf0; border-left: 4px solid var(--green);
+      border-radius: 8px; padding: 10px 12px; margin-top: 14px; font-size: 14px;
+    }
+
+    /* Recipe action buttons */
+    .recipe-actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-outline {
+      border: 1.5px solid var(--primary); color: var(--primary); background: #fff;
+      border-radius: 10px; padding: 9px 16px; font-weight: 700; font-size: 14px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-outline:hover { background: var(--primary); color: #fff; }
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
+    }
+    .results-header h3 { font-size: 20px; }
+    .btn-pdf {
+      background: var(--dark); color: #fff; border: none; border-radius: 10px;
+      padding: 10px 18px; font-weight: 700; font-size: 14px; cursor: pointer;
+    }
+    .btn-pdf:hover { background: #000; }
+
+    .loading { text-align: center; padding: 20px; color: var(--muted); }
+    .spinner {
+      width: 34px; height: 34px; border: 3px solid #f0e4d8; border-top-color: var(--primary);
+      border-radius: 50%; margin: 0 auto 12px; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-blobs">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+  </div>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a href="index.html" class="logo">ai<span>recipe</span>.onl</a>
+      <div class="lang-toggle">
+        <button id="langEn" class="active" onclick="setLang('en')">English</button>
+        <button id="langHi" onclick="setLang('hi')">हिंदी</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1 data-en="What's in your kitchen?" data-hi="Aapki rasoi mein kya hai?">What's in your kitchen?</h1>
+      <p data-en="Select whatever you have. AI will create 5 quick recipes for you."
+         data-hi="Jo bhi hai woh select karo. AI aapke liye 5 jhatpat recipes banayega.">
+        Select whatever you have. AI will create 5 quick recipes for you.
+      </p>
+    </section>
+
+    <!-- Diet preference -->
+    <section class="category">
+      <h2>🍽️ <span data-en="Diet Preference" data-hi="Khaane ki pasand">Diet Preference</span></h2>
+      <div class="diet-pills">
+        <div class="diet-pill active" data-diet="veg" onclick="setDiet(this)"
+             data-en="🥦 Veg" data-hi="🥦 Veg (Shakahari)">🥦 Veg</div>
+        <div class="diet-pill" data-diet="nonveg" onclick="setDiet(this)"
+             data-en="🍗 Non-Veg" data-hi="🍗 Non-Veg (Maas)">🍗 Non-Veg</div>
+        <div class="diet-pill" data-diet="both" onclick="setDiet(this)"
+             data-en="🍲 Both" data-hi="🍲 Dono">🍲 Both</div>
+      </div>
+    </section>
+
+    <!-- Staples (pre-selected so user doesn't have to tick basics every time) -->
+    <section class="category">
+      <h2>🧂 <span data-en="Basic Staples" data-hi="Basic Saamaan">Basic Staples</span></h2>
+      <p class="cat-sub" data-en="Already selected. Uncheck anything you don't have."
+         data-hi="Pehle se selected hain. Jo nahi hai use uncheck karo.">Already selected. Uncheck anything you don't have.</p>
+      <div class="chips" id="staplesChips"></div>
+    </section>
+
+    <!-- Ingredient categories will be injected here -->
+    <div id="categories"></div>
+
+    <!-- Non-veg category (shown only for non-veg / both) -->
+    <section class="category" id="nonvegSection" style="display:none;">
+      <h2>🍗 <span data-en="Non-Veg / Meat" data-hi="Non-Veg / Maas">Non-Veg / Meat</span></h2>
+      <p class="cat-sub" data-en="Meat, eggs, fish and more" data-hi="Maas, anda, machhli waghera">Meat, eggs, fish and more</p>
+      <div class="chips" id="nonvegChips"></div>
+    </section>
+
+    <!-- Custom add -->
+    <section class="category">
+      <h2>➕ <span data-en="Add your own" data-hi="Apna item jodo">Add your own</span></h2>
+      <p class="cat-sub" data-en="Something not in the list? Type and add it."
+         data-hi="List mein nahi hai? Type karke add karo.">Something not in the list? Type and add it.</p>
+      <div class="custom-add">
+        <input type="text" id="customInput" placeholder="e.g. Tofu, Broccoli..." />
+        <button onclick="addCustom()" data-en="Add" data-hi="Jodo">Add</button>
+      </div>
+      <div class="chips" id="customChips" style="margin-top:12px;"></div>
+    </section>
+
+    <!-- Equipment -->
+    <section class="category">
+      <h2>🔧 <span data-en="Kitchen Equipment" data-hi="Rasoi ke saadhan">Kitchen Equipment</span></h2>
+      <p class="cat-sub" data-en="Tell us what you can cook with — recipes will match."
+         data-hi="Aap kis se paka sakte ho — recipes uss hisaab se aayengi.">Tell us what you can cook with — recipes will match.</p>
+      <div class="options-grid" id="equipmentGrid"></div>
+    </section>
+
+    <!-- Summary -->
+    <section class="summary">
+      <h3><span data-en="Selected items" data-hi="Chune gaye items">Selected items</span>:
+        <span class="count" id="selCount">0</span></h3>
+      <div id="selList" class="empty"
+           data-en="Nothing selected yet. Tap items above to select." 
+           data-hi="Abhi kuch select nahi hua. Upar items par tap karo.">Nothing selected yet. Tap items above to select.</div>
+    </section>
+
+    <!-- Results -->
+    <section class="results" id="results"></section>
+
+  </main>
+
+  <!-- Sticky generate bar -->
+  <div class="generate-bar">
+    <div class="wrap">
+      <span class="sel-badge"><span id="selCount2">0</span> <span data-en="items" data-hi="items">items</span></span>
+      <button class="generate-btn" id="generateBtn" onclick="generateRecipes()" disabled
+              data-en="✨ Generate 5 Recipes" data-hi="✨ 5 Recipes Banao">✨ Generate 5 Recipes</button>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================
+    // INGREDIENT DATA  (English + Hindi/Hinglish for every item)
+    // =====================================================
+    const DATA = {
+      vegetables: {
+        titleEn: "Vegetables", titleHi: "Sabziyan", emoji: "🥬",
+        subEn: "Fresh vegetables", subHi: "Taazi sabziyan",
+        items: [
+          { en: "Onion", hi: "Pyaaz", e: "🧅" },
+          { en: "Tomato", hi: "Tamatar", e: "🍅" },
+          { en: "Potato", hi: "Aloo", e: "🥔" },
+          { en: "Garlic", hi: "Lehsun", e: "🧄" },
+          { en: "Ginger", hi: "Adrak", e: "🫚" },
+          { en: "Green Chili", hi: "Hari Mirch", e: "🌶️" },
+          { en: "Spinach", hi: "Palak", e: "🥬" },
+          { en: "Cauliflower", hi: "Phool Gobhi", e: "🥦" },
+          { en: "Cabbage", hi: "Patta Gobhi", e: "🥬" },
+          { en: "Carrot", hi: "Gajar", e: "🥕" },
+          { en: "Capsicum", hi: "Shimla Mirch", e: "🫑" },
+          { en: "Brinjal", hi: "Baingan", e: "🍆" },
+          { en: "Green Peas", hi: "Matar", e: "🟢" },
+          { en: "Cucumber", hi: "Kheera", e: "🥒" },
+          { en: "Lady Finger", hi: "Bhindi", e: "🌿" },
+          { en: "Bottle Gourd", hi: "Lauki / Ghiya", e: "🥒" },
+          { en: "Bitter Gourd", hi: "Karela", e: "🥒" },
+          { en: "Ridge Gourd", hi: "Turai", e: "🥒" },
+          { en: "Pumpkin", hi: "Kaddu", e: "🎃" },
+          { en: "Ash Gourd", hi: "Safed Kaddu / Petha", e: "🥒" },
+          { en: "Tinda", hi: "Tinda", e: "🟢" },
+          { en: "Ivy Gourd", hi: "Tindora / Kundru", e: "🥒" },
+          { en: "Pointed Gourd", hi: "Parwal", e: "🥒" },
+          { en: "Snake Gourd", hi: "Chichinda", e: "🥒" },
+          { en: "Chayote", hi: "Chow Chow", e: "🥒" },
+          { en: "Broccoli", hi: "Broccoli", e: "🥦" },
+          { en: "Radish", hi: "Mooli", e: "🥕" },
+          { en: "Beetroot", hi: "Chukandar", e: "🔴" },
+          { en: "Turnip", hi: "Shalgam", e: "⚪" },
+          { en: "Sweet Potato", hi: "Shakarkandi", e: "🍠" },
+          { en: "Colocasia", hi: "Arbi", e: "🥔" },
+          { en: "Raw Banana", hi: "Kachcha Kela", e: "🍌" },
+          { en: "Raw Papaya", hi: "Kachcha Papita", e: "🥭" },
+          { en: "Drumstick", hi: "Sahjan / Munga", e: "🌿" },
+          { en: "French Beans", hi: "Beans / Faliyan", e: "🫛" },
+          { en: "Cluster Beans", hi: "Gawar Phali", e: "🫛" },
+          { en: "Broad Beans", hi: "Sem", e: "🫛" },
+          { en: "Fenugreek Leaves", hi: "Methi", e: "🌿" },
+          { en: "Mustard Leaves", hi: "Sarson Saag", e: "🌿" },
+          { en: "Amaranth Leaves", hi: "Chaulai", e: "🌿" },
+          { en: "Coriander Leaves", hi: "Dhaniya Patti", e: "🌿" },
+          { en: "Mint", hi: "Pudina", e: "🌿" },
+          { en: "Curry Leaves", hi: "Kadi Patta", e: "🌿" },
+          { en: "Spring Onion", hi: "Hara Pyaaz", e: "🧅" },
+          { en: "Green Garlic", hi: "Hara Lehsun", e: "🧄" },
+          { en: "Mushroom", hi: "Mushroom / Khumb", e: "🍄" },
+          { en: "Sweet Corn", hi: "Bhutta / Makai", e: "🌽" },
+          { en: "Tomato Puree", hi: "Tamatar Puree", e: "🥫" },
+          { en: "Raw Mango", hi: "Kairi", e: "🥭" },
+          { en: "Yam", hi: "Jimikand / Suran", e: "🥔" },
+          { en: "Kohlrabi", hi: "Ganth Gobhi", e: "🥬" },
+          { en: "Lettuce", hi: "Salad Patta", e: "🥬" },
+          { en: "Zucchini", hi: "Zucchini", e: "🥒" }
+        ]
+      },
+      fruits: {
+        titleEn: "Fruits", titleHi: "Phal", emoji: "🍎",
+        subEn: "Fresh fruits", subHi: "Taaze phal",
+        items: [
+          { en: "Banana", hi: "Kela", e: "🍌" },
+          { en: "Apple", hi: "Seb", e: "🍎" },
+          { en: "Lemon", hi: "Nimbu", e: "🍋" },
+          { en: "Mango", hi: "Aam", e: "🥭" },
+          { en: "Orange", hi: "Santra", e: "🍊" },
+          { en: "Sweet Lime", hi: "Mosambi", e: "🍊" },
+          { en: "Grapes", hi: "Angoor", e: "🍇" },
+          { en: "Pomegranate", hi: "Anaar", e: "🔴" },
+          { en: "Coconut", hi: "Nariyal", e: "🥥" },
+          { en: "Papaya", hi: "Papita", e: "🥭" },
+          { en: "Guava", hi: "Amrud", e: "🟢" },
+          { en: "Watermelon", hi: "Tarbooj", e: "🍉" },
+          { en: "Muskmelon", hi: "Kharbooja", e: "🍈" },
+          { en: "Pineapple", hi: "Ananas", e: "🍍" },
+          { en: "Strawberry", hi: "Strawberry", e: "🍓" },
+          { en: "Custard Apple", hi: "Sitaphal", e: "🟢" },
+          { en: "Sapota", hi: "Chikoo", e: "🟤" },
+          { en: "Pear", hi: "Nashpati", e: "🍐" },
+          { en: "Plum", hi: "Aloo Bukhara", e: "🍑" },
+          { en: "Litchi", hi: "Litchi", e: "🔴" },
+          { en: "Jackfruit", hi: "Kathal", e: "🟢" },
+          { en: "Kiwi", hi: "Kiwi", e: "🥝" },
+          { en: "Java Plum", hi: "Jamun", e: "🫐" }
+        ]
+      },
+      dairy: {
+        titleEn: "Dairy & Eggs", titleHi: "Doodh se bane", emoji: "🥛",
+        subEn: "Milk, curd, paneer and more", subHi: "Doodh, dahi, paneer waghera",
+        items: [
+          { en: "Milk", hi: "Doodh", e: "🥛" },
+          { en: "Curd", hi: "Dahi", e: "🥣" },
+          { en: "Paneer", hi: "Paneer", e: "🧀" },
+          { en: "Butter", hi: "Makkhan", e: "🧈" },
+          { en: "Cheese", hi: "Cheese", e: "🧀" },
+          { en: "Fresh Cream", hi: "Fresh Cream", e: "🍦" },
+          { en: "Malai (Milk Cream)", hi: "Malai", e: "🥛" },
+          { en: "Buttermilk", hi: "Chhaach / Mattha", e: "🥛" },
+          { en: "Khoya / Mawa", hi: "Khoya / Mawa", e: "🍥" },
+          { en: "Condensed Milk", hi: "Condensed Milk", e: "🥫" },
+          { en: "Milk Powder", hi: "Milk Powder", e: "🥛" },
+          { en: "Yogurt (Hung)", hi: "Chakka Dahi", e: "🥣" }
+        ]
+      },
+      grains: {
+        titleEn: "Grains, Flours & Pulses", titleHi: "Anaj, Aata aur Dal", emoji: "🌾",
+        subEn: "Rice, flours, lentils and beans", subHi: "Chawal, aata, dal aur beans",
+        items: [
+          { en: "Rice", hi: "Chawal", e: "🍚" },
+          { en: "Basmati Rice", hi: "Basmati Chawal", e: "🍚" },
+          { en: "Wheat Flour", hi: "Gehun Aata", e: "🌾" },
+          { en: "All Purpose Flour", hi: "Maida", e: "🌾" },
+          { en: "Gram Flour", hi: "Besan", e: "🟡" },
+          { en: "Semolina", hi: "Sooji / Rava", e: "⚪" },
+          { en: "Rice Flour", hi: "Chawal Aata", e: "⚪" },
+          { en: "Cornstarch (Corn Flour)", hi: "Corn Flour", e: "🌽" },
+          { en: "Ragi Flour", hi: "Ragi Aata", e: "🟤" },
+          { en: "Bajra Flour", hi: "Bajra Aata", e: "🟤" },
+          { en: "Jowar Flour", hi: "Jowar Aata", e: "🟤" },
+          { en: "Maize Flour", hi: "Makki Aata", e: "🌽" },
+          { en: "Broken Wheat", hi: "Daliya", e: "🌾" },
+          { en: "Quinoa", hi: "Quinoa", e: "⚪" },
+          { en: "Toor Dal", hi: "Arhar Dal", e: "🟡" },
+          { en: "Moong Dal", hi: "Moong Dal", e: "🟢" },
+          { en: "Masoor Dal", hi: "Masoor Dal", e: "🟠" },
+          { en: "Chana Dal", hi: "Chana Dal", e: "🟡" },
+          { en: "Urad Dal", hi: "Urad Dal", e: "⚫" },
+          { en: "Whole Urad", hi: "Sabut Urad", e: "⚫" },
+          { en: "Chickpeas (White)", hi: "Kabuli Chana", e: "🟤" },
+          { en: "Black Chickpeas", hi: "Kala Chana", e: "🟤" },
+          { en: "Kidney Beans", hi: "Rajma", e: "🔴" },
+          { en: "Black-Eyed Peas", hi: "Lobia", e: "⚪" },
+          { en: "Green Gram (Whole)", hi: "Sabut Moong", e: "🟢" },
+          { en: "Soya Chunks", hi: "Soya Badi / Nutri", e: "🟤" },
+          { en: "Peanuts", hi: "Moongfali", e: "🥜" },
+          { en: "Vermicelli", hi: "Sewaiyan", e: "🍜" },
+          { en: "Sabudana", hi: "Sabudana", e: "⚪" },
+          { en: "Poha", hi: "Poha / Chivda", e: "🍚" }
+        ]
+      },
+      spices: {
+        titleEn: "Spices & Masalas", titleHi: "Masale", emoji: "🧂",
+        subEn: "Everyday spices and seasonings", subHi: "Rozana ke masale",
+        items: [
+          { en: "Black Salt", hi: "Kala Namak", e: "🧂" },
+          { en: "Turmeric", hi: "Haldi", e: "🟡" },
+          { en: "Red Chili Powder", hi: "Laal Mirch", e: "🌶️" },
+          { en: "Cumin Seeds", hi: "Jeera", e: "🟤" },
+          { en: "Cumin Powder", hi: "Jeera Powder", e: "🟤" },
+          { en: "Coriander Powder", hi: "Dhaniya Powder", e: "🟫" },
+          { en: "Coriander Seeds", hi: "Sabut Dhaniya", e: "🟤" },
+          { en: "Garam Masala", hi: "Garam Masala", e: "🥄" },
+          { en: "Kashmiri Red Chili", hi: "Kashmiri Laal Mirch", e: "🌶️" },
+          { en: "Ginger Powder", hi: "Sonth", e: "🟤" },
+          { en: "Black Cardamom", hi: "Badi Elaichi", e: "⚫" },
+          { en: "Saffron", hi: "Kesar", e: "🟠" },
+          { en: "Mustard Seeds", hi: "Rai / Sarson", e: "⚫" },
+          { en: "Black Pepper", hi: "Kali Mirch", e: "⚫" },
+          { en: "Asafoetida", hi: "Hing", e: "🟡" },
+          { en: "Carom Seeds", hi: "Ajwain", e: "🟤" },
+          { en: "Fenugreek Seeds", hi: "Methi Dana", e: "🟤" },
+          { en: "Fennel Seeds", hi: "Saunf", e: "🟢" },
+          { en: "Cardamom", hi: "Elaichi", e: "🟢" },
+          { en: "Cloves", hi: "Laung", e: "🟤" },
+          { en: "Cinnamon", hi: "Dalchini", e: "🟤" },
+          { en: "Bay Leaf", hi: "Tej Patta", e: "🍃" },
+          { en: "Star Anise", hi: "Chakra Phool", e: "⭐" },
+          { en: "Dry Red Chili", hi: "Sookhi Laal Mirch", e: "🌶️" },
+          { en: "Kasuri Methi", hi: "Kasuri Methi", e: "🌿" },
+          { en: "Chaat Masala", hi: "Chaat Masala", e: "🥄" },
+          { en: "Amchur (Dry Mango)", hi: "Amchur", e: "🥭" },
+          { en: "Sesame Seeds", hi: "Til", e: "⚪" },
+          { en: "Nutmeg", hi: "Jaiphal", e: "🟤" },
+          { en: "Sugar", hi: "Cheeni", e: "🧊" },
+          { en: "Jaggery", hi: "Gud", e: "🟤" },
+          { en: "Tamarind", hi: "Imli", e: "🟤" }
+        ]
+      },
+      oils: {
+        titleEn: "Oils & Fats", titleHi: "Tel aur Ghee", emoji: "🫒",
+        subEn: "Cooking oils and fats", subHi: "Pakane ka tel aur ghee",
+        items: [
+          { en: "Mustard Oil", hi: "Sarson Tel", e: "🟡" },
+          { en: "Refined Oil", hi: "Refined Tel", e: "🫗" },
+          { en: "Sunflower Oil", hi: "Sunflower Tel", e: "🌻" },
+          { en: "Groundnut Oil", hi: "Moongfali Tel", e: "🥜" },
+          { en: "Ghee", hi: "Ghee", e: "🧈" },
+          { en: "Coconut Oil", hi: "Nariyal Tel", e: "🥥" },
+          { en: "Olive Oil", hi: "Olive Oil", e: "🫒" },
+          { en: "Vanaspati", hi: "Vanaspati / Dalda", e: "🧈" }
+        ]
+      },
+      packaged: {
+        titleEn: "Packaged / Instant", titleHi: "Packet ka saamaan", emoji: "📦",
+        subEn: "Ready and instant items", subHi: "Oats, Maggi, bread waghera",
+        items: [
+          { en: "Oats", hi: "Oats", e: "🥣" },
+          { en: "Instant Noodles", hi: "Instant Noodles / Maggi", e: "🍜" },
+          { en: "Bread", hi: "Bread / Pav", e: "🍞" },
+          { en: "Bread Crumbs", hi: "Bread Crumbs", e: "🍞" },
+          { en: "Ginger-Garlic Paste", hi: "Adrak-Lehsun Paste", e: "🧄" },
+          { en: "Lemon Juice", hi: "Nimbu Ras", e: "🍋" },
+          { en: "Peanut Butter", hi: "Peanut Butter", e: "🥜" },
+          { en: "Pasta", hi: "Pasta", e: "🍝" },
+          { en: "Macaroni", hi: "Macaroni", e: "🍝" },
+          { en: "Cornflakes", hi: "Cornflakes", e: "🥣" },
+          { en: "Ketchup", hi: "Ketchup", e: "🍅" },
+          { en: "Mayonnaise", hi: "Mayonnaise", e: "🥚" },
+          { en: "Soy Sauce", hi: "Soy Sauce", e: "🍶" },
+          { en: "Chili Sauce", hi: "Chili Sauce", e: "🌶️" },
+          { en: "Vinegar", hi: "Sirka", e: "🍶" },
+          { en: "Pickle", hi: "Achaar", e: "🥫" },
+          { en: "Papad", hi: "Papad", e: "🟡" },
+          { en: "Biscuits", hi: "Biscuit", e: "🍪" },
+          { en: "Baking Soda", hi: "Meetha Soda", e: "⚪" },
+          { en: "Baking Powder", hi: "Baking Powder", e: "⚪" },
+          { en: "Yeast", hi: "Yeast", e: "🟤" },
+          { en: "Ready Gravy Mix", hi: "Ready Gravy", e: "🥫" },
+          { en: "Coconut Milk", hi: "Nariyal Doodh", e: "🥥" },
+          { en: "Tomato Sauce", hi: "Tomato Sauce", e: "🍅" }
+        ]
+      },
+      dryfruits: {
+        titleEn: "Dry Fruits & Nuts", titleHi: "Dry Fruits aur Meve", emoji: "🥜",
+        subEn: "Nuts and dry fruits", subHi: "Kaju, badam waghera",
+        items: [
+          { en: "Cashew", hi: "Kaju", e: "🌰" },
+          { en: "Almond", hi: "Badam", e: "🌰" },
+          { en: "Raisins", hi: "Kishmish", e: "🍇" },
+          { en: "Walnut", hi: "Akhrot", e: "🌰" },
+          { en: "Pistachio", hi: "Pista", e: "🟢" },
+          { en: "Dates", hi: "Khajoor", e: "🌰" },
+          { en: "Dried Coconut", hi: "Sookha Nariyal", e: "🥥" },
+          { en: "Fox Nuts", hi: "Makhana", e: "⚪" }
+        ]
+      }
+    };
+
+    const NONVEG = [
+      { en: "Chicken", hi: "Chicken / Murga", e: "🍗" },
+      { en: "Boneless Chicken", hi: "Boneless Chicken", e: "🍗" },
+      { en: "Chicken Breast", hi: "Chicken Breast", e: "🍗" },
+      { en: "Chicken Liver", hi: "Chicken Kaleji", e: "🥩" },
+      { en: "Egg", hi: "Anda", e: "🥚" },
+      { en: "Fish", hi: "Machhli", e: "🐟" },
+      { en: "Rohu Fish", hi: "Rohu Machhli", e: "🐟" },
+      { en: "Pomfret", hi: "Paplet", e: "🐟" },
+      { en: "Mutton", hi: "Mutton / Bakra", e: "🍖" },
+      { en: "Keema (Minced Meat)", hi: "Keema", e: "🥩" },
+      { en: "Prawns", hi: "Jhinga", e: "🦐" },
+      { en: "Crab", hi: "Kekda", e: "🦀" },
+      { en: "Chicken Sausage", hi: "Chicken Sausage", e: "🌭" }
+    ];
+
+    // Basic staples — pre-selected by default so the user doesn't have to tick them every time.
+    const STAPLES = [
+      { en: "Salt", hi: "Namak", e: "🧂" },
+      { en: "Cooking Oil", hi: "Tel", e: "🫗" },
+      { en: "Basic Spices", hi: "Basic Masale", e: "🌶️" },
+      { en: "Water", hi: "Paani", e: "💧" }
+    ];
+
+    const EQUIPMENT = [
+      { id: "gas", en: "Gas Stove", hi: "Gas Chulha", sub: "Most common", e: "🔥", default: true },
+      { id: "oven", en: "Oven / OTG", hi: "Oven", sub: "For baking, roasting", e: "🔲", default: false },
+      { id: "microwave", en: "Microwave", hi: "Microwave", sub: "Quick heating", e: "📡", default: false },
+      { id: "airfryer", en: "Air Fryer", hi: "Air Fryer", sub: "Less oil frying", e: "🌀", default: false },
+      { id: "mixer", en: "Mixer / Grinder", hi: "Mixer", sub: "For grinding, paste", e: "🌪️", default: true }
+    ];
+
+    // =====================================================
+    // STATE
+    // =====================================================
+    let lang = "en";
+    let selected = new Set();     // stores "en|hi" keys
+    let diet = "veg";
+    let equipment = new Set(["gas", "mixer"]);
+
+    // =====================================================
+    // RENDER
+    // =====================================================
+    function itemLabel(item) {
+      return `<span class="emoji">${item.e}</span> ${item.en} <span class="hindi">(${item.hi})</span>`;
+    }
+
+    function renderCategories() {
+      const container = document.getElementById("categories");
+      container.innerHTML = "";
+      Object.keys(DATA).forEach(key => {
+        const cat = DATA[key];
+        const sec = document.createElement("section");
+        sec.className = "category";
+        sec.innerHTML = `
+          <h2>${cat.emoji} <span data-en="${cat.titleEn}" data-hi="${cat.titleHi}">${cat.titleEn}</span></h2>
+          <p class="cat-sub" data-en="${cat.subEn}" data-hi="${cat.subHi}">${cat.subEn}</p>
+          <div class="chips"></div>
+        `;
+        const chips = sec.querySelector(".chips");
+        cat.items.forEach(item => chips.appendChild(makeChip(item)));
+        container.appendChild(sec);
+      });
+    }
+
+    function makeChip(item) {
+      const key = item.en + "|" + item.hi;
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.dataset.key = key;
+      chip.innerHTML = itemLabel(item);
+      if (selected.has(key)) chip.classList.add("selected");
+      chip.onclick = () => {
+        if (selected.has(key)) { selected.delete(key); chip.classList.remove("selected"); }
+        else { selected.add(key); chip.classList.add("selected"); }
+        updateSummary();
+      };
+      return chip;
+    }
+
+    function renderNonVeg() {
+      const chips = document.getElementById("nonvegChips");
+      chips.innerHTML = "";
+      NONVEG.forEach(item => chips.appendChild(makeChip(item)));
+    }
+
+    function renderStaples() {
+      const chips = document.getElementById("staplesChips");
+      chips.innerHTML = "";
+      STAPLES.forEach(item => {
+        // Pre-select every staple by default
+        selected.add(item.en + "|" + item.hi);
+        chips.appendChild(makeChip(item));
+      });
+    }
+
+    function renderEquipment() {
+      const grid = document.getElementById("equipmentGrid");
+      grid.innerHTML = "";
+      EQUIPMENT.forEach(eq => {
+        const row = document.createElement("div");
+        row.className = "option-row";
+        const checked = equipment.has(eq.id) ? "checked" : "";
+        row.innerHTML = `
+          <div class="label">
+            ${eq.e} <span data-en="${eq.en}" data-hi="${eq.hi}">${eq.en}</span>
+            <small>${eq.sub}</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" ${checked} data-eq="${eq.id}" onchange="toggleEquip(this)">
+            <span class="slider"></span>
+          </label>
+        `;
+        grid.appendChild(row);
+      });
+    }
+
+    // =====================================================
+    // ACTIONS
+    // =====================================================
+    function toggleEquip(el) {
+      const id = el.dataset.eq;
+      if (el.checked) equipment.add(id); else equipment.delete(id);
+    }
+
+    function setDiet(el) {
+      document.querySelectorAll(".diet-pill").forEach(p => p.classList.remove("active"));
+      el.classList.add("active");
+      diet = el.dataset.diet;
+      const nvSection = document.getElementById("nonvegSection");
+      nvSection.style.display = (diet === "nonveg" || diet === "both") ? "block" : "none";
+    }
+
+    function addCustom() {
+      const input = document.getElementById("customInput");
+      const val = input.value.trim();
+      if (!val) return;
+      const key = val + "|" + val;
+      if (selected.has(key)) { input.value = ""; return; }
+      selected.add(key);
+      const chip = document.createElement("div");
+      chip.className = "chip selected";
+      chip.dataset.key = key;
+      chip.innerHTML = `<span class="emoji">✅</span> ${val}`;
+      chip.onclick = () => { selected.delete(key); chip.remove(); updateSummary(); };
+      document.getElementById("customChips").appendChild(chip);
+      input.value = "";
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const count = selected.size;
+      document.getElementById("selCount").textContent = count;
+      document.getElementById("selCount2").textContent = count;
+      const list = document.getElementById("selList");
+      const btn = document.getElementById("generateBtn");
+
+      if (count === 0) {
+        list.className = "empty";
+        list.textContent = (lang === "en")
+          ? "Nothing selected yet. Tap items above to select."
+          : "Abhi kuch select nahi hua. Upar items par tap karo.";
+        btn.disabled = true;
+      } else {
+        list.className = "";
+        const names = [...selected].map(k => {
+          const [en, hi] = k.split("|");
+          return (lang === "en") ? en : hi;
+        });
+        list.textContent = names.join(", ");
+        btn.disabled = false;
+      }
+    }
+
+    // =====================================================
+    // LANGUAGE
+    // =====================================================
+    function setLang(l) {
+      lang = l;
+      document.getElementById("langEn").classList.toggle("active", l === "en");
+      document.getElementById("langHi").classList.toggle("active", l === "hi");
+      document.querySelectorAll("[data-en]").forEach(el => {
+        const txt = (l === "en") ? el.dataset.en : el.dataset.hi;
+        if (txt !== undefined) el.textContent = txt;
+      });
+      updateSummary();
+    }
+
+    // =====================================================
+    // GENERATE RECIPES
+    // Calls the AI backend (Vercel + DeepSeek). Until that is connected,
+    // it falls back to a smart local generator that uses the REAL selected
+    // ingredients so the output already reflects what the user picked.
+    // =====================================================
+    let lastRecipes = [];   // stored so we can build the PDF
+
+    async function generateRecipes() {
+      const results = document.getElementById("results");
+      const btn = document.getElementById("generateBtn");
+      results.classList.add("show");
+      results.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>${lang === "en" ? "AI is cooking up 5 recipes..." : "AI 5 recipes bana raha hai..."}</p>
+        </div>`;
+      results.scrollIntoView({ behavior: "smooth" });
+      btn.disabled = true;
+
+      // Ingredients as {en, hi} pairs so recipes can be shown in both languages
+      const chosen = [...selected].map(k => {
+        const [en, hi] = k.split("|");
+        return { en, hi };
+      });
+
+      const payload = {
+        ingredients: chosen.map(c => c.en),
+        diet: diet,
+        equipment: [...equipment],
+        lang: lang,
+        count: 5
+      };
+
+      let recipes;
+      try {
+        // ---- REAL AI CALL (works once /api/recipes is deployed on Vercel) ----
+        const res = await fetch("/api/recipes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("AI backend not available");
+        const data = await res.json();
+        recipes = data.recipes;
+        if (!Array.isArray(recipes) || !recipes.length) throw new Error("empty");
+      } catch (e) {
+        // ---- FALLBACK: local generator using the user's real ingredients ----
+        recipes = buildLocalRecipes(chosen, diet, [...equipment]);
+      }
+
+      lastRecipes = recipes;
+      renderRecipes(recipes);
+      btn.disabled = false;
+    }
+
+    // ---------- Render recipes (works for both AI and fallback data) ----------
+    function renderRecipes(recipes) {
+      const results = document.getElementById("results");
+      const t = (en, hi) => (lang === "en" ? en : hi);
+
+      let html = `
+        <div class="results-header">
+          <h3>${t("Your 5 Recipes", "Aapki 5 Recipes")} 🍳</h3>
+          <button class="btn-pdf" onclick="downloadPDF()">⬇️ ${t("Download PDF", "PDF Download")}</button>
+        </div>`;
+
+      recipes.forEach((r, i) => {
+        // Ingredient names shown in Hinglish (nameHi) to match the recipe content
+        const ingRows = (r.ingredients || []).map(ing =>
+          `<tr><td>${ing.emoji || "•"} ${ing.nameHi || ing.name}</td><td>${ing.qty || ""}</td></tr>`
+        ).join("");
+
+        const steps = (r.steps || []).map(s => `<li>${s}</li>`).join("");
+
+        html += `
+          <div class="recipe">
+            <h4>${r.emoji || "🍽️"} ${i + 1}. ${r.title}</h4>
+            <div class="meta">
+              ${r.prep ? `<span>🔪 ${t("Prep", "Taiyaari")}: ${r.prep}</span>` : ""}
+              ${r.cook ? `<span>🍳 ${t("Cook", "Pakana")}: ${r.cook}</span>` : ""}
+              <span>⏱️ ${t("Total", "Total")}: ${r.time || "—"}</span>
+              <span>🍽️ ${r.servings || "2"} ${t("servings", "log")}</span>
+              <span>🔥 ${r.difficulty || t("Easy", "Aasaan")}</span>
+              ${r.calories ? `<span>⚡ ${r.calories}</span>` : ""}
+              ${r.type ? `<span>${r.type === "nonveg" ? "🍗 Non-Veg" : "🥦 Veg"}</span>` : ""}
+            </div>
+
+            ${r.desc ? `<p style="font-size:14px;color:#5a4a3a;">${r.desc}</p>` : ""}
+
+            <div class="block-title">🧺 ${t("Ingredients (with quantity)", "Ingredients (matra ke saath)")}</div>
+            <table class="ing-table">
+              <thead>
+                <tr><th>${t("Ingredient", "Saamaan")}</th><th>${t("Quantity", "Matra")}</th></tr>
+              </thead>
+              <tbody>${ingRows}</tbody>
+            </table>
+
+            <div class="block-title">👨‍🍳 ${t("Steps", "Banane ka tareeka")}</div>
+            <ol class="steps-list">${steps}</ol>
+
+            ${r.serveWith ? `<p style="font-size:14px;margin-top:12px;">🍽️ <strong>${t("Serve with", "Iske saath khao")}:</strong> ${r.serveWith}</p>` : ""}
+            ${r.tip ? `<div class="tip-box">💡 <strong>${t("Tip", "Tip")}:</strong> ${r.tip}</div>` : ""}
+          </div>`;
+      });
+
+      results.innerHTML = html;
+      results.scrollIntoView({ behavior: "smooth" });
+    }
+
+    // =====================================================
+    // LOCAL FALLBACK GENERATOR
+    // Builds sensible recipes from the user's REAL selected ingredients.
+    // (Used only until the DeepSeek backend is connected.)
+    // =====================================================
+    function buildLocalRecipes(chosen, diet, equipment) {
+      // Recipe CONTENT is always in Hinglish (Indian audience).
+      // The UI language toggle only changes section labels, not the recipe text.
+      const en = false;
+      // Pull out a few key ingredients if present (skip staples)
+      const veggies = chosen.filter(c =>
+        !/salt|oil|spice|water|masala|namak|tel|paani/i.test(c.en));
+      const first = (n) => veggies.slice(0, n);
+
+      const recipes = [];
+
+      // Recipe 1 — Stir Fry / Sabzi
+      if (veggies.length) {
+        const use = first(4);
+        recipes.push({
+          emoji: "🥘",
+          title: en ? `${use[0]?.en || "Mixed"} Veg Stir-Fry` : `${use[0]?.hi || "Mili-juli"} Sabzi`,
+          prep: en ? "10 min" : "10 min", cook: en ? "12 min" : "12 min",
+          time: "22 min", servings: 2, difficulty: en ? "Easy" : "Aasaan",
+          calories: en ? "~180 kcal / serving" : "~180 kcal / plate", type: "veg",
+          desc: en
+            ? "A quick everyday sabzi made from the vegetables you selected — light, healthy and full of flavour."
+            : "Aapke chune hue sabziyon se bani ek jhatpat rozana ki sabzi — light, healthy aur tasty. Ghar jaisa swaad, bina jhanjhat.",
+          ingredients: [
+            ...use.map(c => ({ name: c.en, nameHi: c.hi, qty: en ? "1 cup, chopped" : "1 cup, kata hua", emoji: "🥬" })),
+            { name: "Onion", nameHi: "Pyaaz", qty: en ? "1 medium, sliced" : "1 medium, kata hua", emoji: "🧅" },
+            { name: "Cooking Oil", nameHi: "Tel", qty: "2 tbsp", emoji: "🫗" },
+            { name: "Cumin Seeds", nameHi: "Jeera", qty: "1/2 tsp", emoji: "🟤" },
+            { name: "Salt", nameHi: "Namak", qty: en ? "to taste" : "swaad ke hisaab se", emoji: "🧂" },
+            { name: "Turmeric", nameHi: "Haldi", qty: "1/4 tsp", emoji: "🟡" },
+            { name: "Red Chili Powder", nameHi: "Laal Mirch", qty: "1/2 tsp", emoji: "🌶️" }
+          ],
+          steps: en ? [
+            "Wash all vegetables and chop them into small even pieces so they cook evenly.",
+            "Heat 2 tbsp oil in a pan on medium flame. Add cumin seeds and let them splutter for a few seconds.",
+            "Add sliced onion and sauté for 2–3 minutes until light golden.",
+            "Add the selected vegetables and mix well with the onion.",
+            "Add salt, turmeric and red chili powder. Stir so the masala coats everything.",
+            "Cover with a lid and cook on medium-low flame for 8–10 minutes. Stir every 2–3 minutes so it doesn't stick.",
+            "Check with a fork — once the veggies are soft and tender, turn off the flame.",
+            "Garnish with fresh coriander and serve hot."
+          ] : [
+            "Sabhi sabziyon ko dhokar chhote-chhote barabar tukdon mein kaat lo, taaki wo ek jaisa pakein.",
+            "Ek pan mein medium flame par 2 tbsp tel garam karo. Jeera daalo aur 2-3 second chatakne do.",
+            "Kata hua pyaaz daalo aur 2-3 minute light golden hone tak bhuno.",
+            "Ab chuni hui sabziyan daalo aur pyaaz ke saath achhe se mix karo.",
+            "Namak, haldi aur laal mirch daalo. Aise chalao ki masala sab par lag jaaye.",
+            "Dhakkan laga kar medium-low flame par 8-10 minute pakao. Har 2-3 minute mein chalate raho taaki chipke nahi.",
+            "Fork se check karo — jab sabzi soft ho jaaye to gas band kar do.",
+            "Upar se hara dhaniya daal kar garam-garam serve karo."
+          ],
+          serveWith: en ? "Roti, paratha or steamed rice" : "Roti, paratha ya chawal ke saath",
+          tip: en
+            ? "Squeeze a little lemon at the end for extra freshness. Don't overcook — the veggies taste best slightly crisp."
+            : "Aakhir mein thoda nimbu nichod do, taazgi aa jaati hai. Sabzi ko zyada mat pakao — halki crisp rahe to zyada tasty lagti hai."
+        });
+      }
+
+      // Recipe 2 — Curry / Gravy
+      recipes.push({
+        emoji: "🍛",
+        title: en ? "Homestyle Curry" : "Ghar Jaisi Curry",
+        prep: "15 min", cook: "20 min", time: "35 min", servings: 3,
+        difficulty: en ? "Medium" : "Thoda mehnat",
+        calories: en ? "~240 kcal / serving" : "~240 kcal / plate",
+        type: (diet === "nonveg") ? "nonveg" : "veg",
+        desc: en
+          ? "A rich, comforting curry made with your ingredients and everyday Indian masalas — perfect with rice or roti."
+          : "Aapke saamaan aur rozana ke desi masalon se bani ek rich, mann ko sukoon dene wali curry — chawal ya roti ke saath perfect.",
+        ingredients: [
+          ...first(3).map(c => ({ name: c.en, nameHi: c.hi, qty: en ? "as needed" : "zaroorat ke hisaab se", emoji: "🥬" })),
+          { name: "Onion", nameHi: "Pyaaz", qty: en ? "2 medium, finely chopped" : "2 medium, baareek kata", emoji: "🧅" },
+          { name: "Tomato", nameHi: "Tamatar", qty: en ? "2 medium, pureed" : "2 medium, puree", emoji: "🍅" },
+          { name: "Ginger-Garlic Paste", nameHi: "Adrak-Lehsun Paste", qty: "1 tbsp", emoji: "🧄" },
+          { name: "Garam Masala", nameHi: "Garam Masala", qty: "1/2 tsp", emoji: "🥄" },
+          { name: "Turmeric + Chili", nameHi: "Haldi + Mirch", qty: en ? "1/2 tsp each" : "1/2 tsp dono", emoji: "🌶️" },
+          { name: "Oil", nameHi: "Tel", qty: "3 tbsp", emoji: "🫗" }
+        ],
+        steps: en ? [
+          "Heat 3 tbsp oil in a kadhai. Add chopped onion and cook on medium flame until golden brown (5–6 min).",
+          "Add ginger-garlic paste and sauté for 1 minute until the raw smell goes.",
+          "Add tomato puree and cook until the oil starts separating from the masala (4–5 min).",
+          "Add turmeric, chili powder, salt and garam masala. Bhuno for 2 minutes.",
+          "Add your main ingredients and mix well so they coat in the masala.",
+          "Pour in 1 to 1.5 cups water for gravy. Stir well.",
+          "Cover and simmer on low flame for 12–15 minutes until cooked and the gravy thickens.",
+          "Garnish with fresh coriander and serve hot."
+        ] : [
+          "Kadhai mein 3 tbsp tel garam karo. Kata pyaaz daalo aur medium flame par golden brown hone tak pakao (5-6 min).",
+          "Adrak-lehsun paste daalo aur 1 minute bhuno jab tak kacchi khushboo na chali jaaye.",
+          "Tamatar ka puree daalo aur tab tak pakao jab tak masale se tel alag na hone lage (4-5 min).",
+          "Haldi, laal mirch, namak aur garam masala daalo. 2 minute achhe se bhuno.",
+          "Ab apna main saamaan daalo aur aise mix karo ki masala sab par lag jaaye.",
+          "Gravy ke liye 1 se 1.5 cup paani daalo. Achhe se chalao.",
+          "Dhak kar dheemi aanch par 12-15 minute pakao jab tak pak na jaaye aur gravy gaadi ho jaaye.",
+          "Upar se hara dhaniya daal kar garam serve karo."
+        ],
+        serveWith: en ? "Jeera rice, plain rice or hot roti" : "Jeera rice, sade chawal ya garam roti ke saath",
+        tip: en
+          ? "For a restaurant-style richer gravy, add 1 tbsp fresh cream or 2 tbsp curd while simmering."
+          : "Restaurant jaisi rich gravy ke liye pakate waqt 1 tbsp malai ya 2 tbsp dahi daal do — swaad double ho jaata hai."
+      });
+
+      // Recipe 3 — Rice dish
+      recipes.push({
+        emoji: "🍚",
+        title: en ? "Quick Masala Rice" : "Jhatpat Masala Rice",
+        prep: "10 min", cook: "18 min", time: "28 min", servings: 2,
+        difficulty: en ? "Easy" : "Aasaan",
+        calories: en ? "~320 kcal / serving" : "~320 kcal / plate", type: "veg",
+        desc: en
+          ? "A one-pot flavoured rice loaded with your veggies — a full meal by itself."
+          : "Ek hi bartan mein bani sabzi wali masala rice — akele hi ek pura meal ban jaata hai.",
+        ingredients: [
+          { name: "Rice", nameHi: "Chawal", qty: en ? "1 cup (soaked)" : "1 cup (bhigoya hua)", emoji: "🍚" },
+          ...first(3).map(c => ({ name: c.en, nameHi: c.hi, qty: en ? "1/2 cup, chopped" : "1/2 cup, kata", emoji: "🥕" })),
+          { name: "Onion", nameHi: "Pyaaz", qty: en ? "1, sliced" : "1, kata", emoji: "🧅" },
+          { name: "Whole Spices", nameHi: "Sabut Masale", qty: en ? "bay leaf, cloves, 1 cardamom" : "tej patta, laung, 1 elaichi", emoji: "🥄" },
+          { name: "Ghee / Oil", nameHi: "Ghee / Tel", qty: "2 tbsp", emoji: "🧈" },
+          { name: "Water", nameHi: "Paani", qty: "2 cups", emoji: "💧" }
+        ],
+        steps: en ? [
+          "Wash the rice 2–3 times and soak in water for 10 minutes, then drain.",
+          "Heat ghee in a pot. Add whole spices and let them sizzle for a few seconds.",
+          "Add sliced onion and sauté until light golden.",
+          "Add the chopped vegetables and salt. Cook for 3–4 minutes.",
+          "Add the drained rice and gently mix for 1 minute so it coats in ghee.",
+          "Pour in 2 cups water, bring to a boil, then lower the flame.",
+          "Cover and cook on low for 10–12 minutes until all water is absorbed.",
+          "Turn off the flame, keep covered for 5 minutes, then fluff with a fork and serve."
+        ] : [
+          "Chawal ko 2-3 baar dhokar 10 minute paani mein bhigo do, phir paani nikaal do.",
+          "Ek bartan mein ghee garam karo. Sabut masale daalo aur kuch second chatakne do.",
+          "Kata pyaaz daalo aur light golden hone tak bhuno.",
+          "Kati sabziyan aur namak daalo. 3-4 minute pakao.",
+          "Bhigoye hue chawal daalo aur 1 minute halke haath se mix karo taaki ghee lag jaaye.",
+          "2 cup paani daalo, ubaal aane do, phir flame dheemi kar do.",
+          "Dhak kar dheemi aanch par 10-12 minute pakao jab tak saara paani sukh na jaaye.",
+          "Gas band karke 5 minute dhaka rehne do, phir fork se fluff karke serve karo."
+        ],
+        serveWith: en ? "Plain curd, raita or pickle" : "Sade dahi, raita ya achaar ke saath",
+        tip: en
+          ? "Don't stir too much after adding water, or the rice can get mushy."
+          : "Paani daalne ke baad zyada mat chalao, warna chawal gal kar chipchipa ho jaata hai."
+      });
+
+      // Recipe 4 — Soup / light
+      recipes.push({
+        emoji: "🍲",
+        title: en ? "Light Veggie Soup" : "Halki Veg Soup",
+        prep: "8 min", cook: "12 min", time: "20 min", servings: 2,
+        difficulty: en ? "Easy" : "Aasaan",
+        calories: en ? "~90 kcal / serving" : "~90 kcal / bowl", type: "veg",
+        desc: en
+          ? "A warm, light and healthy soup — great for evenings or when you want something quick and comforting."
+          : "Ek garam, halki aur healthy soup — sham ke liye ya jab kuch jhatpat aur comforting chahiye ho tab perfect.",
+        ingredients: [
+          ...first(3).map(c => ({ name: c.en, nameHi: c.hi, qty: en ? "1/2 cup, finely chopped" : "1/2 cup, baareek kata", emoji: "🥬" })),
+          { name: "Garlic", nameHi: "Lehsun", qty: en ? "3 cloves, crushed" : "3 kali, kuchli hui", emoji: "🧄" },
+          { name: "Black Pepper", nameHi: "Kali Mirch", qty: "1/4 tsp", emoji: "⚫" },
+          { name: "Salt", nameHi: "Namak", qty: en ? "to taste" : "swaad ke hisaab se", emoji: "🧂" },
+          { name: "Water", nameHi: "Paani", qty: "3 cups", emoji: "💧" },
+          { name: "Cornstarch (optional)", nameHi: "Corn Flour (optional)", qty: en ? "1 tsp in water" : "1 tsp paani mein", emoji: "🌽" }
+        ],
+        steps: en ? [
+          "Finely chop all the vegetables so they cook fast.",
+          "In a pot, add 3 cups water, crushed garlic and the chopped vegetables.",
+          "Bring to a boil, then simmer on medium flame for 8–10 minutes until the veggies are soft.",
+          "Add salt and black pepper to taste.",
+          "For a thicker soup, mix 1 tsp cornstarch in 2 tbsp cold water and stir it in. Cook 1 more minute.",
+          "For a smooth soup, blend lightly; or keep it chunky as you like.",
+          "Serve hot."
+        ] : [
+          "Sabhi sabziyon ko baareek kaat lo taaki jaldi pakein.",
+          "Ek bartan mein 3 cup paani, kuchla lehsun aur kati sabziyan daalo.",
+          "Ubaal aane do, phir medium flame par 8-10 minute simmer karo jab tak sabzi soft na ho.",
+          "Swaad ke hisaab se namak aur kali mirch daalo.",
+          "Gaadi soup chahiye to 1 tsp corn flour 2 tbsp thande paani mein ghol kar daalo. 1 minute aur pakao.",
+          "Smooth soup ke liye halka blend karo, ya chunky rakhna ho to waise hi rehne do.",
+          "Garam-garam serve karo."
+        ],
+        serveWith: en ? "Toasted bread or croutons" : "Toast ki hui bread ya croutons ke saath",
+        tip: en
+          ? "A few drops of lemon at the end really lifts the flavour."
+          : "Aakhir mein kuch boond nimbu daalne se swaad kaafi khul jaata hai."
+      });
+
+      // Recipe 5 — Snack (uses non-veg if selected, else veg)
+      const nonvegPicked = chosen.find(c => /chicken|egg|fish|mutton|prawn|keema/i.test(c.en));
+      recipes.push({
+        emoji: nonvegPicked ? "🍗" : "🥪",
+        title: nonvegPicked
+          ? (en ? `${nonvegPicked.en} Quick Fry` : `${nonvegPicked.hi} Quick Fry`)
+          : (en ? "Crispy Veg Snack" : "Crispy Veg Snack"),
+        prep: "12 min", cook: "12 min", time: "24 min", servings: 2,
+        difficulty: en ? "Easy" : "Aasaan",
+        calories: en ? "~210 kcal / serving" : "~210 kcal / plate",
+        type: nonvegPicked ? "nonveg" : "veg",
+        desc: nonvegPicked
+          ? (en ? "A fast, spicy fry using the meat you selected — great as a starter or side."
+                : "Aapke chune hue meat se bana ek fatafat, chatpata fry — starter ya side dish ke liye badhiya.")
+          : (en ? "A crispy tea-time snack made from your veggies — kids love it too."
+                : "Aapki sabziyon se bana ek crispy chai-time snack — bacche bhi bahut pasand karte hain."),
+        ingredients: nonvegPicked ? [
+          { name: nonvegPicked.en, nameHi: nonvegPicked.hi, qty: en ? "250 g, cleaned" : "250 g, saaf kiya", emoji: "🍗" },
+          { name: "Onion", nameHi: "Pyaaz", qty: en ? "1, sliced" : "1, kata", emoji: "🧅" },
+          { name: "Ginger-Garlic Paste", nameHi: "Adrak-Lehsun Paste", qty: "1 tbsp", emoji: "🧄" },
+          { name: "Mixed Spices", nameHi: "Masale (mix)", qty: en ? "1 tsp (turmeric, chili, garam masala)" : "1 tsp (haldi, mirch, garam masala)", emoji: "🌶️" },
+          { name: "Lemon", nameHi: "Nimbu", qty: en ? "1/2, juice" : "1/2, ras", emoji: "🍋" },
+          { name: "Oil", nameHi: "Tel", qty: "2 tbsp", emoji: "🫗" }
+        ] : [
+          ...first(2).map(c => ({ name: c.en, nameHi: c.hi, qty: en ? "1/2 cup, grated/chopped" : "1/2 cup, kadduksh/kata", emoji: "🥬" })),
+          { name: "Gram Flour / Bread", nameHi: "Besan / Bread", qty: en ? "to bind" : "bind karne ke liye", emoji: "🍞" },
+          { name: "Mixed Spices", nameHi: "Masale (mix)", qty: "1 tsp", emoji: "🌶️" },
+          { name: "Salt", nameHi: "Namak", qty: en ? "to taste" : "swaad ke hisaab se", emoji: "🧂" },
+          { name: "Oil", nameHi: "Tel", qty: en ? "for shallow frying" : "shallow fry ke liye", emoji: "🫗" }
+        ],
+        steps: nonvegPicked ? (en ? [
+          "Clean and pat dry the meat. Marinate with ginger-garlic paste, salt, lemon juice and spices for at least 10 minutes.",
+          "Heat 2 tbsp oil in a pan on medium-high flame.",
+          "Add sliced onion and sauté for 2 minutes.",
+          "Add the marinated meat and spread it out in the pan.",
+          "Cook on medium flame, stirring every few minutes, until fully cooked through (chicken ~12 min, keema ~10 min).",
+          "Cook until slightly dry and browned at the edges.",
+          "Garnish with coriander and a squeeze of lemon. Serve hot."
+        ] : [
+          "Meat ko saaf karke sukha lo. Adrak-lehsun paste, namak, nimbu ras aur masalon se kam se kam 10 minute marinate karo.",
+          "Ek pan mein medium-high flame par 2 tbsp tel garam karo.",
+          "Kata pyaaz daalo aur 2 minute bhuno.",
+          "Marinate kiya hua meat daalo aur pan mein faila do.",
+          "Medium flame par har thodi der mein chalate hue poora pakne tak pakao (chicken ~12 min, keema ~10 min).",
+          "Halka sukh jaaye aur kinaron se brown ho jaaye tab tak pakao.",
+          "Dhaniya aur thoda nimbu daal kar garam serve karo."
+        ]) : (en ? [
+          "Grate or finely chop the vegetables and put them in a bowl.",
+          "Add spices, salt and enough gram flour (or crumbled bread) to bind into a soft dough.",
+          "Mix well and shape into small flat tikkis.",
+          "Heat oil in a pan for shallow frying.",
+          "Fry the tikkis on medium flame for 3–4 minutes each side until golden and crisp.",
+          "Drain on a tissue to remove extra oil.",
+          "Serve hot with ketchup or green chutney."
+        ] : [
+          "Sabziyon ko kadduksh kar lo ya baareek kaat kar ek bowl mein daalo.",
+          "Masale, namak aur itna besan (ya crumble ki hui bread) daalo ki soft dough ban jaaye.",
+          "Achhe se mix karke chhoti flat tikki ka shape do.",
+          "Ek pan mein shallow fry ke liye tel garam karo.",
+          "Tikki ko medium flame par har taraf 3-4 minute golden aur crisp hone tak fry karo.",
+          "Extra tel nikaalne ke liye tissue par rakho.",
+          "Ketchup ya hari chutney ke saath garam serve karo."
+        ]),
+        serveWith: en ? "Green chutney, ketchup or as a side with dal-rice" : "Hari chutney, ketchup ya dal-chawal ke side mein",
+        tip: en
+          ? "Great as an evening tea-time snack. Don't fry on high flame or it will brown outside but stay raw inside."
+          : "Sham ki chai ke saath badhiya lagta hai. Tez aanch par mat talna, warna bahar se brown aur andar se kaccha reh jaayega."
+      });
+
+      return recipes.slice(0, 5);
+    }
+
+    // =====================================================
+    // PDF DOWNLOAD
+    // Opens a clean printable page; user chooses "Save as PDF".
+    // Works on all browsers/phones without any external library.
+    // =====================================================
+    function downloadPDF() {
+      if (!lastRecipes.length) return;
+      const t = (en, hi) => (lang === "en" ? en : hi);
+      const win = window.open("", "_blank");
+
+      let body = `
+        <h1>🍳 airecipe.onl — ${t("Your 5 Recipes", "Aapki 5 Recipes")}</h1>
+        <p class="sub">${t("AI-generated recipes from your kitchen ingredients", "Aapke ghar ke saamaan se AI recipes")}</p>`;
+
+      lastRecipes.forEach((r, i) => {
+        const ingRows = (r.ingredients || []).map(ing =>
+          `<tr><td>${ing.emoji || "•"} ${ing.nameHi || ing.name}</td><td>${ing.qty || ""}</td></tr>`
+        ).join("");
+        const steps = (r.steps || []).map(s => `<li>${s}</li>`).join("");
+
+        body += `
+          <div class="r">
+            <h2>${r.emoji || "🍽️"} ${i + 1}. ${r.title}</h2>
+            <p class="meta">⏱️ ${r.time || "—"} &nbsp;·&nbsp; 🍽️ ${r.servings || 2} ${t("servings", "logon ke liye")} &nbsp;·&nbsp; 🔥 ${r.difficulty || ""}</p>
+            ${r.desc ? `<p>${r.desc}</p>` : ""}
+            <h3>🧺 ${t("Ingredients (with quantity)", "Ingredients (matra ke saath)")}</h3>
+            <table><thead><tr><th>${t("Ingredient", "Saamaan")}</th><th>${t("Quantity", "Matra")}</th></tr></thead><tbody>${ingRows}</tbody></table>
+            <h3>👨‍🍳 ${t("Steps", "Banane ka tareeka")}</h3>
+            <ol>${steps}</ol>
+            ${r.tip ? `<p class="tip">💡 <b>${t("Tip", "Tip")}:</b> ${r.tip}</p>` : ""}
+          </div>`;
+      });
+
+      win.document.write(`
+        <html><head><meta charset="UTF-8"><title>airecipe.onl Recipes</title>
+        <style>
+          body{font-family:Arial,Helvetica,sans-serif;color:#1f1300;max-width:800px;margin:0 auto;padding:24px;line-height:1.6;}
+          h1{color:#e8481c;margin-bottom:4px;}
+          .sub{color:#6b5d4f;margin-top:0;}
+          .r{border:1px solid #eee;border-radius:12px;padding:16px 18px;margin:18px 0;page-break-inside:avoid;}
+          h2{color:#c73a12;margin:0 0 4px;}
+          h3{margin:16px 0 6px;font-size:15px;}
+          .meta{color:#6b5d4f;font-size:13px;margin:0 0 8px;}
+          table{width:100%;border-collapse:collapse;font-size:14px;}
+          th,td{border-bottom:1px solid #eee;padding:6px 8px;text-align:left;}
+          td:last-child,th:last-child{text-align:right;}
+          ol{padding-left:20px;} li{margin-bottom:6px;}
+          .tip{background:#eefaf0;border-left:4px solid #1a8f4c;padding:8px 12px;border-radius:6px;}
+          @media print{ .noprint{display:none;} }
+        </style></head>
+        <body>
+          ${body}
+          <p style="text-align:center;color:#999;font-size:12px;margin-top:30px;">Generated by airecipe.onl</p>
+          <div class="noprint" style="text-align:center;margin-top:20px;">
+            <button onclick="window.print()" style="background:#e8481c;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">
+              🖨️ ${t("Print / Save as PDF", "Print / PDF Save karo")}
+            </button>
+          </div>
+          <script>setTimeout(function(){window.print();},600);<\/script>
+        </body></html>`);
+      win.document.close();
+    }
+
+    // =====================================================
+    // INIT
+    // =====================================================
+    renderStaples();
+    renderCategories();
+    renderNonVeg();
+    renderEquipment();
+    updateSummary();
+  </script>
+
+</body>
+</html>
