@@ -113,6 +113,14 @@
     }
     .logo span { color: var(--dark); }
 
+    /* ---------- Account box (login/logout) ---------- */
+    .account-box { display:flex; align-items:center; gap:10px; font-size:13px; }
+    .account-box .acc-email { color:var(--muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .account-box .acc-btn {
+      background:var(--primary); color:#fff; text-decoration:none; border:none; cursor:pointer;
+      font-weight:700; font-size:13px; padding:8px 14px; border-radius:10px;
+    }
+
     /* ---------- Hero ---------- */
     .hero { text-align: center; padding: 24px 0 40px; }
     .badge {
@@ -319,8 +327,9 @@
   <div class="bg-food" id="bgFood"></div>
 
   <header>
-    <div class="wrap">
+    <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;">
       <div class="logo">ai<span>recipe</span>.onl</div>
+      <div id="accountBox" class="account-box"></div>
     </div>
   </header>
 
@@ -488,24 +497,73 @@
   </script>
 
   <!-- Razorpay Checkout library -->
+  <!-- Razorpay Checkout library -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <script>
-    // Where the user lands after a verified payment (tool unlocked)
-    const TOOL_URL = "tool.html";
 
-    async function startPayment() {
+  <!-- Firebase auth + payment (module) -->
+  <script type="module">
+    import { auth, db, onAuthStateChanged, signOut, doc, getDoc } from "./firebase-config.js";
+
+    const TOOL_URL = "tool.html";
+    let currentUser = null;
+
+    // --- Track login state + update the header ---
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      renderAccount(user);
+      // If a logged-in user is already paid, let the Buy button take them to the tool
+      if (user) {
+        try {
+          const snap = await getDoc(doc(db, "users", user.uid));
+          if (snap.exists() && snap.data().paid === true) {
+            markAlreadyPaid();
+          }
+        } catch (e) { /* ignore */ }
+      }
+    });
+
+    function renderAccount(user) {
+      const box = document.getElementById("accountBox");
+      if (!box) return;
+      if (user) {
+        box.innerHTML = `<span class="acc-email">${user.email}</span>
+          <button class="acc-btn" id="logoutBtn">Logout</button>`;
+        document.getElementById("logoutBtn").onclick = async () => {
+          await signOut(auth);
+          location.reload();
+        };
+      } else {
+        box.innerHTML = `<a class="acc-btn" href="login.html">Login</a>`;
+      }
+    }
+
+    function markAlreadyPaid() {
+      document.querySelectorAll("#buyBtn").forEach(btn => {
+        btn.innerHTML = "Open Tool →<small>Aap already member ho ✅</small>";
+        btn.onclick = () => { window.location.href = TOOL_URL; };
+      });
+    }
+
+    // --- Buy flow (needs login first) ---
+    window.startPayment = async function () {
+      // Must be logged in
+      if (!currentUser) {
+        window.location.href = "login.html?next=index.html%23buy";
+        return;
+      }
+
       const btn = document.getElementById("buyBtn");
       const original = btn.innerHTML;
       btn.disabled = true;
       btn.innerHTML = "Please wait...";
 
       try {
-        // 1) Create an order on our server (keeps the secret hidden)
         const orderRes = await fetch("/api/create-order", { method: "POST" });
         const order = await orderRes.json();
         if (!orderRes.ok) throw new Error(order.error || "Order failed");
 
-        // 2) Open Razorpay Checkout
+        const idToken = await currentUser.getIdToken();
+
         const options = {
           key: order.keyId,
           amount: order.amount,
@@ -514,53 +572,42 @@
           name: "airecipe.onl",
           description: "Lifetime Access — AI Recipe Tool",
           theme: { color: "#e8481c" },
+          prefill: { email: currentUser.email },
           handler: async function (response) {
-            // 3) Verify the payment on our server
             try {
               const verifyRes = await fetch("/api/verify-payment", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(response)
+                body: JSON.stringify({ ...response, idToken })
               });
               const data = await verifyRes.json();
-              if (verifyRes.ok && data.verified && data.token) {
-                // Save access + go to the tool
-                localStorage.setItem("airecipe_access", data.token);
-                window.location.href = TOOL_URL + "?key=" + encodeURIComponent(data.token);
+              if (verifyRes.ok && data.verified) {
+                window.location.href = TOOL_URL;
               } else {
                 alert("Payment verification failed. Agar paise kat gaye hain to hume contact karein.");
-                btn.disabled = false;
-                btn.innerHTML = original;
+                btn.disabled = false; btn.innerHTML = original;
               }
             } catch (e) {
               alert("Verification error. Support se contact karein.");
-              btn.disabled = false;
-              btn.innerHTML = original;
+              btn.disabled = false; btn.innerHTML = original;
             }
           },
-          modal: {
-            ondismiss: function () {
-              btn.disabled = false;
-              btn.innerHTML = original;
-            }
-          }
+          modal: { ondismiss: function () { btn.disabled = false; btn.innerHTML = original; } }
         };
 
         const rzp = new Razorpay(options);
         rzp.on("payment.failed", function () {
           alert("Payment fail ho gaya. Dobara try karein.");
-          btn.disabled = false;
-          btn.innerHTML = original;
+          btn.disabled = false; btn.innerHTML = original;
         });
         rzp.open();
 
       } catch (err) {
         console.error(err);
         alert("Payment shuru nahi ho paya. Thodi der baad try karein.");
-        btn.disabled = false;
-        btn.innerHTML = original;
+        btn.disabled = false; btn.innerHTML = original;
       }
-    }
+    };
   </script>
 
 </body>

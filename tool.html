@@ -276,16 +276,24 @@
 <body>
 
   <!-- Access gate: shown to visitors who haven't paid -->
+  <!-- Checking screen: shown while we verify login + payment (prevents flash) -->
+  <div id="checkingScreen" style="position:fixed;inset:0;z-index:110;background:var(--cream);display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;">
+      <div class="spinner" style="margin:0 auto 12px;"></div>
+      <p style="color:var(--muted);">Checking access...</p>
+    </div>
+  </div>
+
+  <!-- Access gate: shown to visitors who aren't logged in or haven't paid -->
   <div id="accessGate">
     <div class="gate-card">
       <div class="lock">🔒</div>
-      <h2>Premium Tool</h2>
-      <p>Ye AI recipe tool premium hai. Access paane ke liye one-time payment karo — phir lifetime use karo.</p>
+      <h2 id="gateTitle">Premium Tool</h2>
+      <p id="gateMsg">Ye AI recipe tool premium hai. Access paane ke liye one-time payment karo — phir lifetime use karo.</p>
       <div class="price"><s>₹499</s>₹199</div>
       <p style="margin-top:2px;">One-time payment · Lifetime access</p>
-      <!-- Razorpay Payment Link yahan lagega (homepage jaisa) -->
-      <a href="index.html#buy" class="gate-btn">Unlock for ₹199 →</a>
-      <p class="gate-note">Payment ke baad aap seedha yahan pahunch jaoge.</p>
+      <a href="index.html#buy" class="gate-btn" id="gateBtn">Unlock for ₹199 →</a>
+      <p class="gate-note" id="gateNote">Payment ke baad aap seedha yahan pahunch jaoge.</p>
     </div>
   </div>
 
@@ -1272,42 +1280,67 @@
     }
 
     // =====================================================
-    // ACCESS CONTROL
-    // Payment ke baad Razorpay user ko is page par ?key=<SECRET> ke saath bhejta hai.
-    // Sahi key mile to access mil jaata hai aur localStorage me yaad rakh liya jaata hai,
-    // taaki user ko dobara payment na karna pade.
-    // =====================================================
-    const ACCESS_TOKEN = "arecipe_ok_7h2k9";   // <-- yahi token Razorpay redirect URL me daalna hai
-    const STORAGE_KEY = "airecipe_access";
-
-    function checkAccess() {
-      const urlKey = new URLSearchParams(location.search).get("key");
-      const saved = localStorage.getItem(STORAGE_KEY);
-
-      if (urlKey === ACCESS_TOKEN) {
-        // Aaya payment ke baad — access grant karo aur yaad rakho
-        localStorage.setItem(STORAGE_KEY, ACCESS_TOKEN);
-        return true;
-      }
-      if (saved === ACCESS_TOKEN) {
-        // Pehle se paid user (is device par)
-        return true;
-      }
-      return false;
-    }
-
-    if (!checkAccess()) {
-      document.getElementById("accessGate").classList.add("show");
-    }
-
-    // =====================================================
-    // INIT
+    // INIT (renders the tool UI; access is checked separately below)
     // =====================================================
     renderStaples();
     renderCategories();
     renderNonVeg();
     renderEquipment();
     updateSummary();
+  </script>
+
+  <!-- =====================================================
+       ACCESS CONTROL — Firebase login + Firestore paid check
+       ===================================================== -->
+  <script type="module">
+    import { auth, db, onAuthStateChanged, doc, getDoc } from "./firebase-config.js";
+
+    const checking = document.getElementById("checkingScreen");
+    const gate = document.getElementById("accessGate");
+
+    function showGate(state) {
+      checking.style.display = "none";
+      const title = document.getElementById("gateTitle");
+      const msg = document.getElementById("gateMsg");
+      const btn = document.getElementById("gateBtn");
+      const note = document.getElementById("gateNote");
+
+      if (state === "login") {
+        title.textContent = "Login Zaroori";
+        msg.textContent = "Tool use karne ke liye pehle login karo. Agar member ho to login karte hi tool khul jaayega.";
+        btn.textContent = "Login / Sign Up →";
+        btn.href = "login.html?next=tool.html";
+        note.textContent = "Naya ho? Sign up karke ₹199 me lifetime access lo.";
+      } else {
+        title.textContent = "Premium Tool";
+        msg.textContent = "Aap logged in ho, lekin abhi payment nahi hua. ₹199 one-time deke lifetime access paao.";
+        btn.textContent = "Unlock for ₹199 →";
+        btn.href = "index.html#buy";
+        note.textContent = "Payment ke baad tool turant khul jaayega.";
+      }
+      gate.classList.add("show");
+    }
+
+    function grantAccess() {
+      checking.style.display = "none";
+      gate.classList.remove("show");
+      // Tool already rendered — nothing else needed.
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { showGate("login"); return; }
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists() && snap.data().paid === true) {
+          grantAccess();
+        } else {
+          showGate("pay");
+        }
+      } catch (e) {
+        console.error("Access check error:", e);
+        showGate("pay");
+      }
+    });
   </script>
 
 </body>

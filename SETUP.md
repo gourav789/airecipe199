@@ -64,3 +64,60 @@ After adding, **Redeploy** the project.
 - If the AI backend is unavailable, the tool shows sample fallback recipes
   (so it never looks broken). Once the key is set, real AI recipes appear.
 - DeepSeek endpoint used: `https://api.deepseek.com/chat/completions`, model `deepseek-chat`.
+
+---
+
+## STEP 6 — Firebase (Login + Paid access)
+
+The site now uses Firebase for signup/login and to remember who has paid.
+
+### 6a. Firebase project (already done)
+- Project: `airecipe-c9fb1`
+- Authentication → Email/Password: **Enabled**
+- Firestore Database: **Created** (production mode)
+- Web config is in `firebase-config.js` (these keys are public — safe).
+
+### 6b. Firestore security rules
+1. Firebase console → Firestore → **Rules** tab.
+2. Paste the contents of `firestore.rules` (in this project).
+3. **Publish**.
+
+This makes it so users can read only their own record and can NEVER set
+themselves as paid from the browser. Only the server can mark `paid = true`.
+
+### 6c. Service account (lets the server mark users paid)
+1. Firebase console → ⚙️ **Project settings → Service accounts**.
+2. Click **Generate new private key** → downloads a JSON file.
+3. Open that JSON. You need 3 values from it:
+   - `project_id`
+   - `client_email`
+   - `private_key`  (a long block starting with `-----BEGIN PRIVATE KEY-----`)
+
+### 6d. Add these to Vercel → Environment Variables
+| Name | Value |
+|------|-------|
+| `FIREBASE_PROJECT_ID`   | the `project_id` from the JSON |
+| `FIREBASE_CLIENT_EMAIL` | the `client_email` from the JSON |
+| `FIREBASE_PRIVATE_KEY`  | the full `private_key` (paste exactly, including the BEGIN/END lines) |
+
+> Tip: When pasting the private key in Vercel, paste it exactly as-is
+> (with its line breaks). The code also handles keys stored with `\n`.
+
+Then **Redeploy**.
+
+### The full flow now
+1. Visitor clicks Buy Now → if not logged in, sent to `login.html`.
+2. Signs up / logs in (Firebase). A `users/{uid}` doc is created with `paid:false`.
+3. Pays ₹199 via Razorpay.
+4. `verify-payment.js` checks the Razorpay signature + Firebase ID token,
+   then sets `paid:true` in Firestore (server-side, secure).
+5. User is sent to `tool.html`, which checks login + `paid` and unlocks.
+6. On any device, logging in unlocks the tool (no re-payment).
+
+### Env vars checklist (all in Vercel)
+- `DEEPSEEK_API_KEY`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`

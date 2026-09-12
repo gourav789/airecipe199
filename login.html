@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login / Signup — airecipe.onl</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    :root { --primary:#e8481c; --primary-dark:#c73a12; --dark:#1f1300; --cream:#fff7ef; --muted:#6b5d4f; --green:#1a8f4c; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--cream); color:var(--dark); min-height:100vh;
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .card {
+      background:#fff; border:1px solid #f0e4d8; border-radius:22px;
+      padding:32px 26px; width:100%; max-width:410px;
+      box-shadow:0 12px 40px rgba(232,72,28,0.12);
+    }
+    .logo { text-align:center; font-size:24px; font-weight:800; color:var(--primary); margin-bottom:4px; }
+    .logo span { color:var(--dark); }
+    .sub { text-align:center; color:var(--muted); font-size:14px; margin-bottom:22px; }
+
+    .tabs { display:flex; background:#f3e7db; border-radius:12px; padding:4px; margin-bottom:20px; }
+    .tabs button {
+      flex:1; border:none; background:transparent; cursor:pointer;
+      padding:10px; border-radius:9px; font-weight:700; font-size:15px; color:var(--muted);
+    }
+    .tabs button.active { background:var(--primary); color:#fff; }
+
+    label { display:block; font-size:13px; font-weight:700; margin:14px 0 6px; }
+    input {
+      width:100%; padding:13px 14px; border:1.5px solid #ecdccd; border-radius:12px;
+      font-size:15px; outline:none;
+    }
+    input:focus { border-color:var(--primary); }
+
+    .btn {
+      width:100%; margin-top:22px; background:var(--primary); color:#fff; border:none;
+      border-radius:13px; padding:15px; font-size:16px; font-weight:800; cursor:pointer;
+      box-shadow:0 8px 20px rgba(232,72,28,0.3);
+    }
+    .btn:disabled { opacity:0.6; cursor:not-allowed; }
+
+    .msg { margin-top:14px; font-size:14px; text-align:center; min-height:20px; }
+    .msg.err { color:#c0392b; }
+    .msg.ok { color:var(--green); }
+
+    .foot { text-align:center; margin-top:18px; font-size:13px; }
+    .foot a { color:var(--primary); text-decoration:none; }
+    .note { text-align:center; font-size:12px; color:var(--muted); margin-top:16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">ai<span>recipe</span>.onl</div>
+    <p class="sub">Login ya account banao — recipes unlock karne ke liye</p>
+
+    <div class="tabs">
+      <button id="tabLogin" class="active" onclick="setMode('login')">Login</button>
+      <button id="tabSignup" onclick="setMode('signup')">Sign Up</button>
+    </div>
+
+    <form id="authForm" onsubmit="return false;">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="aap@example.com" autocomplete="email" required />
+
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Kam se kam 6 characters" autocomplete="current-password" required />
+
+      <button type="submit" class="btn" id="submitBtn">Login</button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <p class="foot">
+      <a href="index.html">← Home par wapas jao</a>
+    </p>
+    <p class="note">🔒 Aapka data surakshit hai. Password kisi ke saath share nahi hota.</p>
+  </div>
+
+  <script type="module">
+    import {
+      auth, db,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      doc, getDoc, setDoc
+    } from "./firebase-config.js";
+
+    let mode = "login";
+    const $ = (id) => document.getElementById(id);
+
+    // Where to go after login/signup. Supports ?next=tool.html etc.
+    const params = new URLSearchParams(location.search);
+    const nextPage = params.get("next") || "index.html";
+
+    window.setMode = function (m) {
+      mode = m;
+      $("tabLogin").classList.toggle("active", m === "login");
+      $("tabSignup").classList.toggle("active", m === "signup");
+      $("submitBtn").textContent = (m === "login") ? "Login" : "Create Account";
+      $("msg").textContent = "";
+      $("password").setAttribute("autocomplete", m === "login" ? "current-password" : "new-password");
+    };
+
+    // If already logged in, skip straight ahead
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.replace(nextPage);
+      }
+    });
+
+    function showMsg(text, ok) {
+      const el = $("msg");
+      el.textContent = text;
+      el.className = "msg " + (ok ? "ok" : "err");
+    }
+
+    function friendlyError(code) {
+      const map = {
+        "auth/invalid-email": "Email sahi nahi hai.",
+        "auth/missing-password": "Password daalo.",
+        "auth/weak-password": "Password kam se kam 6 characters ka rakho.",
+        "auth/email-already-in-use": "Ye email pehle se registered hai. Login karo.",
+        "auth/invalid-credential": "Email ya password galat hai.",
+        "auth/user-not-found": "Aisa koi account nahi. Pehle sign up karo.",
+        "auth/wrong-password": "Password galat hai.",
+        "auth/too-many-requests": "Bahut baar try kiya. Thodi der baad koshish karo."
+      };
+      return map[code] || "Kuch galat ho gaya. Dobara try karo.";
+    }
+
+    $("authForm").addEventListener("submit", async () => {
+      const email = $("email").value.trim();
+      const password = $("password").value;
+      const btn = $("submitBtn");
+
+      if (!email || !password) { showMsg("Email aur password dono daalo.", false); return; }
+
+      btn.disabled = true;
+      const label = btn.textContent;
+      btn.textContent = "Please wait...";
+
+      try {
+        let cred;
+        if (mode === "signup") {
+          cred = await createUserWithEmailAndPassword(auth, email, password);
+          // Create the user doc (paid = false initially)
+          await setDoc(doc(db, "users", cred.user.uid), {
+            email: email,
+            paid: false,
+            createdAt: Date.now()
+          }, { merge: true });
+          showMsg("Account ban gaya! Redirect ho raha hai...", true);
+        } else {
+          cred = await signInWithEmailAndPassword(auth, email, password);
+          showMsg("Login successful! Redirect ho raha hai...", true);
+        }
+        setTimeout(() => window.location.replace(nextPage), 700);
+      } catch (e) {
+        console.error(e);
+        showMsg(friendlyError(e.code), false);
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    });
+  </script>
+</body>
+</html>
