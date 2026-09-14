@@ -18,9 +18,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // TEMPORARY TEST: charging ₹1 to test a real transaction.
-    // Change back to (199 * 100) after testing.
-    const amountPaise = 1 * 100; // ₹1 in paise  <-- TEST ONLY
+    const amountPaise = 199 * 100; // ₹199 in paise
 
     // Razorpay Orders API (Basic auth = keyId:keySecret)
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
