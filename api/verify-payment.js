@@ -109,7 +109,7 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error("verify-payment error:", err);
-    return res.status(500).json({ error: "Verification failed." });
+    return res.status(500).json({ error: "Verification failed: " + (err.message || String(err)) });
   }
 }
 
@@ -120,11 +120,20 @@ export default async function handler(req, res) {
 async function getAccessToken() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
-  // Env vars often store the key with literal \n — convert to real newlines
+
+  // Handle every common way the key gets stored:
+  // 1) literal \n  -> real newline
   privateKey = privateKey.replace(/\\n/g, "\n");
+  // 2) surrounding quotes accidentally pasted
+  privateKey = privateKey.replace(/^["']|["']$/g, "");
+  // 3) trim stray spaces
+  privateKey = privateKey.trim();
 
   if (!clientEmail || !privateKey) {
     throw new Error("Missing Firebase service account env vars.");
+  }
+  if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+    throw new Error("FIREBASE_PRIVATE_KEY looks malformed (no BEGIN marker).");
   }
 
   const now = Math.floor(Date.now() / 1000);
