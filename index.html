@@ -581,10 +581,14 @@
                 body: JSON.stringify({ ...response, idToken })
               });
               const data = await verifyRes.json();
-              if (verifyRes.ok && data.verified) {
+              if (verifyRes.ok && data.verified && data.dbUpdated) {
                 window.location.href = TOOL_URL;
+              } else if (data.verified && !data.dbUpdated) {
+                // Payment genuine but Firestore write failed
+                alert("Payment ho gaya, par access set karne me dikkat aayi. Error: " + (data.error || "unknown") + "\nSupport se contact karein.");
+                btn.disabled = false; btn.innerHTML = original;
               } else {
-                alert("Payment verification failed. Agar paise kat gaye hain to hume contact karein.");
+                alert("Payment verification failed: " + (data.error || "unknown error"));
                 btn.disabled = false; btn.innerHTML = original;
               }
             } catch (e) {
