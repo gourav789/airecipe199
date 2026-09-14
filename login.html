@@ -69,6 +69,10 @@
       <label for="password">Password</label>
       <input type="password" id="password" placeholder="Kam se kam 6 characters" autocomplete="current-password" required />
 
+      <div id="forgotRow" style="text-align:right;margin-top:8px;">
+        <a href="#" id="forgotLink" style="font-size:13px;color:var(--primary);text-decoration:none;">Forgot password?</a>
+      </div>
+
       <button type="submit" class="btn" id="submitBtn">Login</button>
       <div class="msg" id="msg"></div>
     </form>
@@ -85,6 +89,7 @@
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
       onAuthStateChanged,
+      sendPasswordResetEmail,
       doc, getDoc, setDoc
     } from "./firebase-config.js";
 
@@ -102,6 +107,8 @@
       $("submitBtn").textContent = (m === "login") ? "Login" : "Create Account";
       $("msg").textContent = "";
       $("password").setAttribute("autocomplete", m === "login" ? "current-password" : "new-password");
+      // Forgot password only makes sense on the login tab
+      $("forgotRow").style.display = (m === "login") ? "block" : "none";
     };
 
     // If already logged in, skip straight ahead
@@ -130,6 +137,23 @@
       };
       return map[code] || "Kuch galat ho gaya. Dobara try karo.";
     }
+
+    // ---- Forgot password ----
+    $("forgotLink").addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = $("email").value.trim();
+      if (!email) {
+        showMsg("Pehle apna email upar daalo, phir 'Forgot password?' dabao.", false);
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        showMsg("Password reset link aapke email par bhej diya gaya hai. Inbox (aur spam) check karo.", true);
+      } catch (e2) {
+        console.error(e2);
+        showMsg(friendlyError(e2.code), false);
+      }
+    });
 
     $("authForm").addEventListener("submit", async () => {
       const email = $("email").value.trim();
