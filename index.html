@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Meta Pixel Code -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '1392063469089975');
+  fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1392063469089975&ev=PageView&noscript=1"
+  /></noscript>
+  <!-- End Meta Pixel Code -->
+
   <title>airecipe.onl — Ghar ke saamaan se AI banaye 5 Recipes | Sirf ₹199</title>
   <meta name="description" content="Ghar mein jo bhi sabzi, masale aur saamaan hai woh select karo, aur AI turant banayega 5 swadisht recipes. One-time ₹199, lifetime access." />
 
@@ -562,6 +581,11 @@
         const order = await orderRes.json();
         if (!orderRes.ok) throw new Error(order.error || "Order failed");
 
+        // Meta Pixel — user started checkout (Buy Now clicked, popup opening)
+        if (window.fbq) {
+          fbq('track', 'InitiateCheckout', { value: 199, currency: 'INR' });
+        }
+
         const idToken = await currentUser.getIdToken();
 
         const options = {
@@ -582,6 +606,10 @@
               });
               const data = await verifyRes.json();
               if (verifyRes.ok && data.verified && data.dbUpdated) {
+                // Meta Pixel — genuine, verified purchase completed
+                if (window.fbq) {
+                  fbq('track', 'Purchase', { value: 199, currency: 'INR' });
+                }
                 window.location.href = TOOL_URL;
               } else if (data.verified && !data.dbUpdated) {
                 // Payment genuine but Firestore write failed
