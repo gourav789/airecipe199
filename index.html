@@ -146,15 +146,21 @@
     .video-section p.vsub { color: var(--muted); font-size: 15px; margin-bottom: 20px; }
     .video-wrap {
       position: relative;
-      max-width: 520px;
+      max-width: 300px;          /* vertical short — narrower */
       margin: 0 auto;
       border-radius: 18px;
       overflow: hidden;
       border: 1px solid #f0e4d8;
       box-shadow: 0 12px 30px rgba(232,72,28,0.12);
       background: #000;
+      aspect-ratio: 9 / 16;      /* YouTube Short is vertical */
     }
-    .video-wrap video { width: 100%; display: block; border-radius: 18px; }
+    .video-wrap iframe {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border: 0;
+    }
 
     /* ---------- Hero ---------- */
     .hero { text-align: center; padding: 24px 0 40px; }
@@ -392,15 +398,14 @@
       <h2>🎬 Dekho ye tool kaise kaam karta hai</h2>
       <p class="vsub">Sirf 3 step — saamaan select karo, "Generate" dabao, aur 5 recipes tayaar!</p>
       <div class="video-wrap">
-        <video
-          src="video/tutorial.mp4"
-          controls
-          preload="metadata"
-          playsinline
-          poster=""
-        >
-          Aapka browser video support nahi karta.
-        </video>
+        <iframe
+          src="https://www.youtube.com/embed/K4xE1EGEHS0"
+          title="airecipe.onl tutorial"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
       </div>
     </section>
   </div>
