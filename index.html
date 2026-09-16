@@ -140,6 +140,22 @@
       font-weight:700; font-size:13px; padding:8px 14px; border-radius:10px;
     }
 
+    /* ---------- Video tutorial ---------- */
+    .video-section { padding: 20px 0 34px; text-align: center; }
+    .video-section h2 { font-size: 23px; font-weight: 800; margin-bottom: 6px; }
+    .video-section p.vsub { color: var(--muted); font-size: 15px; margin-bottom: 20px; }
+    .video-wrap {
+      position: relative;
+      max-width: 520px;
+      margin: 0 auto;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid #f0e4d8;
+      box-shadow: 0 12px 30px rgba(232,72,28,0.12);
+      background: #000;
+    }
+    .video-wrap video { width: 100%; display: block; border-radius: 18px; }
+
     /* ---------- Hero ---------- */
     .hero { text-align: center; padding: 24px 0 40px; }
     .badge {
@@ -366,6 +382,25 @@
           <small>One-time payment · Lifetime access</small>
         </a>
         <p class="price-note"><s>₹499</s> &nbsp; Sirf ₹199 · Koi monthly fees nahi</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------- VIDEO TUTORIAL ---------- -->
+  <div class="wrap">
+    <section class="video-section fade-up">
+      <h2>🎬 Dekho ye tool kaise kaam karta hai</h2>
+      <p class="vsub">Sirf 3 step — saamaan select karo, "Generate" dabao, aur 5 recipes tayaar!</p>
+      <div class="video-wrap">
+        <video
+          src="video/tutorial.mp4"
+          controls
+          preload="metadata"
+          playsinline
+          poster=""
+        >
+          Aapka browser video support nahi karta.
+        </video>
       </div>
     </section>
   </div>
